@@ -1,0 +1,212 @@
+[
+  {
+    "id": "SC-XXI-CERTIFIED-COPY",
+    "court": "SUPREME_COURT",
+    "caseTypes": ["SLP_CIVIL", "SLP_CRIMINAL"],
+    "severity": "FATAL",
+    "check": "missing_document",
+    "text": "The petition shall be accompanied by a certified copy of the judgment or order appealed from.",
+    "why": "A special leave petition without the certified copy of the impugned judgment is not properly presented. Its application and delivery dates are also what drive the s.12(2) exclusion, so this document decides limitation as well as admissibility.",
+    "source": "Supreme Court Rules, 2013 — Order XXI",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "CERTIFIED_COPY" },
+    "fix": {
+      "auto": false,
+      "guidance": "Obtain and file the certified copy of the High Court judgment. If it is awaited, file the application for exemption from filing the certified copy."
+    }
+  },
+  {
+    "id": "SC-XXI-SYNOPSIS",
+    "court": "SUPREME_COURT",
+    "caseTypes": ["SLP_CIVIL", "SLP_CRIMINAL", "WRIT_PETITION"],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "missing_document",
+    "text": "The petition shall be accompanied by a synopsis and a list of dates in chronological order.",
+    "why": "The synopsis and list of dates is the first thing the bench reads. Its absence is a standard Registry objection.",
+    "source": "Supreme Court Rules, 2013 — Order XXI read with Order XV",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "SYNOPSIS_LIST_OF_DATES" },
+    "fix": {
+      "auto": false,
+      "guidance": "Prepare a synopsis with a chronological list of dates running up to the impugned judgment."
+    }
+  },
+  {
+    "id": "SC-XXI-VAKALATNAMA",
+    "court": "SUPREME_COURT",
+    "caseTypes": [],
+    "severity": "FATAL",
+    "check": "missing_document",
+    "text": "A vakalatnama or memo of appearance in favour of an Advocate-on-Record shall be filed.",
+    "why": "Only an Advocate-on-Record may file in the Supreme Court. Without the vakalatnama the presentation is invalid.",
+    "source": "Supreme Court Rules, 2013 — Order IV",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "VAKALATNAMA" },
+    "fix": {
+      "auto": false,
+      "guidance": "File the vakalatnama executed in favour of the Advocate-on-Record."
+    }
+  },
+  {
+    "id": "SC-XXI-AFFIDAVIT",
+    "court": "SUPREME_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "missing_document",
+    "text": "The petition shall be supported by an affidavit.",
+    "why": "The supporting affidavit verifies the facts stated in the petition. A petition filed without it is returned.",
+    "source": "Supreme Court Rules, 2013 — Order XXI read with Order XI",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "AFFIDAVIT" },
+    "fix": {
+      "auto": false,
+      "guidance": "File the supporting affidavit, duly sworn and attested."
+    }
+  },
+  {
+    "id": "SC-VIII-ANNEXURE-CROSSREF",
+    "court": "SUPREME_COURT",
+    "caseTypes": [],
+    "severity": "FATAL",
+    "check": "annexure_cross_reference",
+    "text": "Every annexure relied on in the petition shall form part of the paperbook, and the paperbook shall not carry annexures that are not relied on.",
+    "why": "This is the defect that most often survives an advocate's own proof-read. The petition says 'Annexure P-7' at page 14 and there is no P-7 in the bundle, or a P-9 sits in the bundle that the petition never mentions. The Registry catches it; by then days have gone.",
+    "source": "Supreme Court Rules, 2013 — Order VIII (paperbook and documents)",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "Either file the missing annexure or correct the reference in the petition. PARAM lists the exact page where each broken reference appears."
+    }
+  },
+  {
+    "id": "SC-VIII-PAGINATION",
+    "court": "SUPREME_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "pagination_continuity",
+    "text": "The paperbook shall be consecutively paginated.",
+    "why": "Defective pagination is among the objections most frequently raised, and it is raised separately from the others — costing a whole extra round of scrutiny.",
+    "source": "Supreme Court Rules, 2013 — Order VIII",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": true,
+      "guidance": "Repaginate the whole paperbook as one sequence. PARAM can do this and rebuild the index."
+    }
+  },
+  {
+    "id": "SC-VIII-INDEX",
+    "court": "SUPREME_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "index_mismatch",
+    "text": "The paperbook shall carry an index showing the correct page numbers of each document.",
+    "why": "An index whose page numbers do not match the bundle is treated as no index at all.",
+    "source": "Supreme Court Rules, 2013 — Order VIII",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": true,
+      "guidance": "Regenerate the index against the actual paginated bundle."
+    }
+  },
+  {
+    "id": "SC-VIII-VERNACULAR",
+    "court": "SUPREME_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "vernacular_without_translation",
+    "text": "True typed copies with English translation shall be filed for documents that are in a vernacular language.",
+    "why": "The Supreme Court records are in English. Vernacular documents without a typed English translation are a standing objection.",
+    "source": "Supreme Court Rules, 2013 — Order VIII",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "File a typed English translation for each vernacular page. PARAM lists the page ranges."
+    }
+  },
+  {
+    "id": "SC-VIII-DIM-COPY",
+    "court": "SUPREME_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "dim_annexure",
+    "text": "True typed copies shall be filed of documents that are dim, handwritten or otherwise illegible.",
+    "why": "Illegible annexures are a documented Registry objection and are usually flagged only after the first round of scrutiny.",
+    "source": "Supreme Court Rules, 2013 — Order VIII",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "File a fair typed copy of each dim or handwritten page alongside the original."
+    }
+  },
+  {
+    "id": "SC-LIMITATION-SLP",
+    "court": "SUPREME_COURT",
+    "caseTypes": [],
+    "severity": "FATAL",
+    "check": "limitation",
+    "text": "The petition shall be filed within the period of limitation, failing which an application for condonation of delay must accompany it.",
+    "why": "Section 3 of the Limitation Act is mandatory — the court must dismiss a time-barred matter of its own motion, whether or not the other side raises it.",
+    "source": "Limitation Act, 1963, ss.3 and 5 read with the Schedule",
+    "sourceUrl": "https://www.indiacode.nic.in/handle/123456789/1595",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": true,
+      "guidance": "File an application under s.5 explaining every single day of delay. PARAM can draft one with a day-by-day chart."
+    }
+  },
+  {
+    "id": "SC-CAUSE-TITLE",
+    "court": "SUPREME_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "cause_title_match",
+    "text": "The cause title shall correctly describe the parties as they stood before the court below.",
+    "why": "An incorrect or mismatched cause title is a listed Registry defect and causes the matter to be re-verified against the impugned order.",
+    "source": "Supreme Court Rules, 2013 — Order XXI (form of petition)",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "needsAi": true,
+    "fix": {
+      "auto": false,
+      "guidance": "Check every party name and their array against the impugned judgment before filing."
+    }
+  },
+  {
+    "id": "SC-SYNOPSIS-PRAYER",
+    "court": "SUPREME_COURT",
+    "caseTypes": [],
+    "severity": "ADVISORY",
+    "check": "synopsis_prayer",
+    "text": "The synopsis and the prayer shall be consistent with each other.",
+    "why": "A mismatch between what the synopsis says the matter is about and what the prayer actually asks for is a recorded Registry objection, and it also reads badly to the bench.",
+    "source": "Supreme Court Rules, 2013 — Order XXI (Registry scrutiny practice)",
+    "sourceUrl": "https://www.sci.gov.in/rules-supreme-court-of-india/",
+    "verifiedOn": "2026-09-08",
+    "status": "unverified",
+    "needsAi": true,
+    "fix": {
+      "auto": false,
+      "guidance": "Read the synopsis and the prayer side by side and align the relief claimed."
+    }
+  }
+]

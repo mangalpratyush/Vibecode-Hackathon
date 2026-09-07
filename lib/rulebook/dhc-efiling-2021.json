@@ -1,0 +1,72 @@
+[
+  {
+    "id": "DHC-EFIL-OCR-SEARCHABLE",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "text_layer",
+    "text": "The document shall be converted into an OCR-searchable PDF or PDF/A.",
+    "why": "A flat scan with no text layer cannot be searched, indexed or read by the Registry's systems. This is the single most common technical rejection in e-filing, and it is invisible to the eye — the PDF looks perfectly fine on screen.",
+    "source": "E-filing Rules of the High Court of Delhi, 2021",
+    "sourceUrl": "https://delhihighcourt.nic.in/web/sites/default/files/efiling/NotificationFile_X74GTJ7YAKY.pdf",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "Re-export the document as an OCR-searchable PDF or PDF/A. Most PDF tools do this under 'Recognise text' / 'Make searchable'."
+    }
+  },
+  {
+    "id": "DHC-EFIL-FILE-SIZE",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "file_size",
+    "text": "The maximum file size for e-filing is 100 MB in the High Court (20 MB in the District Courts).",
+    "why": "An oversized bundle is rejected by the portal itself, before a human ever sees it. Advocates have re-filed the same appeal repeatedly against this cap.",
+    "source": "E-filing Rules of the High Court of Delhi, 2021",
+    "sourceUrl": "https://delhihighcourt.nic.in/web/sites/default/files/efiling/NotificationFile_X74GTJ7YAKY.pdf",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "maxMb": 100 },
+    "fix": {
+      "auto": true,
+      "guidance": "Downsample image-only pages and re-export. PARAM can compress the bundle under the cap without touching text pages."
+    }
+  },
+  {
+    "id": "DHC-EFIL-BOOKMARKS",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "ADVISORY",
+    "check": "bookmarks",
+    "text": "PDF files are to be book-marked as provided in the rules.",
+    "why": "Bookmarks are how the bench navigates an electronic paperbook. A long bundle with no bookmark tree is hard to use even when it is otherwise in order.",
+    "source": "E-filing Rules of the High Court of Delhi, 2021",
+    "sourceUrl": "https://delhihighcourt.nic.in/web/sites/default/files/efiling/NotificationFile_X74GTJ7YAKY.pdf",
+    "verifiedOn": "2026-09-08",
+    "status": "unverified",
+    "params": { "minPagesToRequire": 25 },
+    "fix": {
+      "auto": true,
+      "guidance": "Add a bookmark per document and per annexure. PARAM can build the tree from the classified bundle."
+    }
+  },
+  {
+    "id": "DHC-EFIL-BLANK-PAGES",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "ADVISORY",
+    "check": "blank_pages",
+    "text": "Blank pages should not form part of the e-filed paperbook.",
+    "why": "Blank pages inflate the pagination and desynchronise the index from the actual bundle, which then reads as a pagination defect.",
+    "source": "E-filing Rules of the High Court of Delhi, 2021 (scrutiny practice)",
+    "sourceUrl": "https://delhihighcourt.nic.in/web/sites/default/files/efiling/NotificationFile_X74GTJ7YAKY.pdf",
+    "verifiedOn": "2026-09-08",
+    "status": "unverified",
+    "fix": {
+      "auto": true,
+      "guidance": "Remove blank pages and repaginate. PARAM can do both together."
+    }
+  }
+]

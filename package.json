@@ -1,0 +1,45 @@
+{
+  "name": "param",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PARAM \u2014 Pre-filing Audit, Registry Mitra",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "seed": "node scripts/seed-mongo.mjs",
+    "demo": "node scripts/make-demo-bundle.mjs",
+    "selftest": "node scripts/selftest.mjs",
+    "test:assistant": "node scripts/assistant-test.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs",
+    "test:fix": "node scripts/test-fix-draft.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "jose": "^6.2.4",
+    "lucide-react": "^1.24.0",
+    "mongodb": "^7.5.0",
+    "next": "16.2.10",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^3.11.174",
+    "pdfkit": "^0.19.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "@types/pdfkit": "^0.17.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/three": "^0.185.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.10",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

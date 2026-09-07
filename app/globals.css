@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+/*
+  PARAM design system.
+
+  The palette is court stationery, not a SaaS dashboard: cream paper, ink navy,
+  and a single gold accent for anything the Registry would stamp. Severity is
+  the only place colour is allowed to shout, because on the defect memo colour
+  carries meaning — an advocate scanning the page must be able to tell fatal
+  from cosmetic without reading a word.
+*/
+
+:root {
+  --paper: #f6f1e7;
+  --paper-raised: #fffdf8;
+  --ink: #14202f;
+  --ink-soft: #4a5a6e;
+  --navy: #132a47;
+  --navy-light: #24456e;
+  --gold: #b8862f;
+  --gold-soft: #f0e2c4;
+  --rule: #ddd5c4;
+
+  --fatal: #a01b1b;
+  --fatal-bg: #fbeaea;
+  --objection: #a86a10;
+  --objection-bg: #fdf2dd;
+  --advisory: #2a5f8f;
+  --advisory-bg: #e8f1f9;
+  --pass: #1f6f4a;
+  --pass-bg: #e6f4ec;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-raised: var(--paper-raised);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-navy: var(--navy);
+  --color-navy-light: var(--navy-light);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-rule: var(--rule);
+  --color-fatal: var(--fatal);
+  --color-objection: var(--objection);
+  --color-advisory: var(--advisory);
+  --color-pass: var(--pass);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--gold-soft);
+}
+
+/* Tabular figures everywhere a page number, day count or date appears. */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Login preloader ─────────────────────────────────────────────────────── */
+
+@keyframes param-wave {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes param-breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.02); }
+}
+
+/* ── Landing type-in ─────────────────────────────────────────────────────── */
+
+@keyframes param-letter {
+  0%   { opacity: 0; transform: translateY(24px) scale(0.72); filter: blur(6px); }
+  60%  { filter: blur(0); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes param-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.param-letter {
+  opacity: 0;
+  display: inline-block;
+  animation: param-letter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.param-rise {
+  opacity: 0;
+  animation: param-rise 0.7s ease-out forwards;
+}
+
+/* ── Landing reveal ────────────────────────────────────────────────────── */
+
+@keyframes landing-reveal {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.landing-reveal {
+  opacity: 0;
+  animation: landing-reveal 0.72s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.landing-reveal-delay-1 { animation-delay: 90ms; }
+.landing-reveal-delay-2 { animation-delay: 180ms; }
+.landing-reveal-delay-3 { animation-delay: 270ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-reveal,
+  .param-letter,
+  .param-rise {
+    opacity: 1;
+    animation: none;
+    transform: none;
+  }
+}
+
+/* ── Defect memo ─────────────────────────────────────────────────────────── */
+
+.sev-FATAL {
+  --sev: var(--fatal);
+  --sev-bg: var(--fatal-bg);
+}
+.sev-REGISTRY_OBJECTION {
+  --sev: var(--objection);
+  --sev-bg: var(--objection-bg);
+}
+.sev-ADVISORY {
+  --sev: var(--advisory);
+  --sev-bg: var(--advisory-bg);
+}
+
+/* A stamped-paper feel for the memo sheet, without an image asset. */
+.paper-sheet {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 0 rgba(20, 32, 47, 0.04), 0 8px 24px -18px rgba(20, 32, 47, 0.5);
+}
+
+/* Chat scroll area: thin, unobtrusive. */
+.thin-scroll::-webkit-scrollbar { width: 8px; }
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: #cfc7b6;
+  border-radius: 999px;
+}
+.thin-scroll::-webkit-scrollbar-track { background: transparent; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; }
+}
+
+/* ── Portal shell ────────────────────────────────────────────────────────────
+   Appended as a second :root block on purpose: the login screen is being
+   edited in parallel, and a later block wins without touching the first, so
+   these can be retuned without rewriting anything above.
+
+   The palette follows the sign-in screen — warm cream paper, oxblood for
+   anything the user commits to, gold for the Registry's own marks — so the
+   portal reads as the same product rather than a different app behind a login.
+*/
+:root {
+  --paper: #faf7f2;
+  --paper-raised: #ffffff;
+  --ink: #241f1e;
+  --ink-soft: #6b615c;
+  --rule: #e7ded3;
+
+  /* Sidebar */
+  --shell: #241f1e;
+  --shell-raised: #2f2825;
+  --shell-ink: #e9e1d8;
+  --shell-ink-soft: #a2968d;
+
+  /* Brand */
+  --brand: #7b2832;
+  --brand-dark: #611f27;
+  --brand-soft: #f6ece9;
+  --gold: #b3813a;
+  --gold-soft: #f4e7cf;
+  --navy: #193b59;
+  --navy-light: #24547d;
+}
+
+@theme inline {
+  --color-shell: var(--shell);
+  --color-shell-raised: var(--shell-raised);
+  --color-shell-ink: var(--shell-ink);
+  --color-shell-ink-soft: var(--shell-ink-soft);
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-soft: var(--brand-soft);
+}
+
+/* Card surface used across the portal. */
+.card {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(36, 31, 30, 0.04), 0 10px 28px -22px rgba(36, 31, 30, 0.45);
+}
+
+/* Small uppercase label above a heading or a group of fields. */
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* The paper-sheet class predates the card and is kept as an alias so the memo
+   and rulebook screens do not have to change in the same pass. */
+.paper-sheet {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  box-shadow: 0 1px 2px rgba(36, 31, 30, 0.04), 0 10px 28px -22px rgba(36, 31, 30, 0.45);
+}

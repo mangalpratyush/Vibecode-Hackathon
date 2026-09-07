@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="PARAM">
+  <circle cx="32" cy="32" r="29" fill="#71242f"/>
+  <circle cx="32" cy="32" r="25.5" fill="none" stroke="#d4a557" stroke-width="1.5" opacity=".9"/>
+  <path d="M22 46.5V18.5h12c8.2 0 13 4.2 13 10.7S42.2 40 34 40h-7" fill="none" stroke="#fff8ec" stroke-width="5.2" stroke-linecap="square" stroke-linejoin="round"/>
+  <path d="m31 28.5 3.4 3.4 7.2-7.8" fill="none" stroke="#e4b966" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17.5 49h22" stroke="#e4b966" stroke-width="3" stroke-linecap="round"/>
+</svg>

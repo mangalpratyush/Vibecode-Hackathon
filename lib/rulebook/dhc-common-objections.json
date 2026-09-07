@@ -1,0 +1,317 @@
+[
+  {
+    "id": "DHC-OBJ-PAGINATION",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "pagination_continuity",
+    "text": "Page numbering be done properly.",
+    "why": "The Registry pages the whole paperbook as one sequence. A break, repeat or reversal in the printed page numbers means the bench cannot be taken to a page by number, and the filing comes back.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": true,
+      "guidance": "Repaginate the bundle as one continuous sequence and re-stamp every page. PARAM can do this and regenerate the index to match."
+    }
+  },
+  {
+    "id": "DHC-OBJ-VERNACULAR",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "vernacular_without_translation",
+    "text": "English Translation of Vernacular be filed.",
+    "why": "Proceedings in the High Court of Delhi are in English. Any document in Hindi or another language must be accompanied by a typed English translation, or it cannot be read on the record.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "File a typed English translation of each vernacular page, certified by the advocate. PARAM lists the exact page ranges that need it."
+    }
+  },
+  {
+    "id": "DHC-OBJ-MARGIN",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "left_margin",
+    "text": "Margin of 4 cm. be kept on the left side of the annexures.",
+    "why": "The left margin is where the paperbook is bound and where the Registry stamps. Text running into it is physically lost after binding.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "minCm": 4 },
+    "fix": {
+      "auto": false,
+      "guidance": "Re-typeset or re-scan the flagged pages with a 4 cm left margin before filing."
+    }
+  },
+  {
+    "id": "DHC-OBJ-DIM-ANNEXURE",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "dim_annexure",
+    "text": "Fair typed copies of dim annexures be filed.",
+    "why": "A faint photocopy or low-resolution scan is treated as illegible. The Registry requires a fair typed copy alongside it.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "File a fair typed copy of each dim page, marked as the typed copy of that annexure."
+    }
+  },
+  {
+    "id": "DHC-OBJ-AFFIDAVIT-ATTESTED",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "attestation_missing",
+    "text": "Affidavit should be attested.",
+    "why": "An unattested affidavit is not a sworn statement. The supporting affidavit must carry the deponent's signature and the attestation of the Oath Commissioner or Notary.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "AFFIDAVIT" },
+    "fix": {
+      "auto": false,
+      "guidance": "Have the affidavit sworn and attested before an Oath Commissioner or Notary, and file the attested copy."
+    }
+  },
+  {
+    "id": "DHC-OBJ-SIGNED-BY-COUNSEL",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "signature_missing",
+    "text": "Petition / appeal be stamped / signed by the Counsel.",
+    "why": "The petition must carry counsel's signature and stamp. An unsigned petition is not a valid presentation.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "PETITION" },
+    "fix": {
+      "auto": false,
+      "guidance": "Sign and affix counsel's stamp at the foot of the petition before filing."
+    }
+  },
+  {
+    "id": "DHC-OBJ-VAKALATNAMA",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "FATAL",
+    "check": "missing_document",
+    "text": "Power of attorney be filed.",
+    "why": "Without a vakalatnama on record the advocate has no authority to appear, and the matter cannot be entertained.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "VAKALATNAMA" },
+    "fix": {
+      "auto": false,
+      "guidance": "Execute and file the vakalatnama, signed by the client and accepted by the advocate."
+    }
+  },
+  {
+    "id": "DHC-OBJ-WELFARE-STAMP",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "welfare_stamp",
+    "text": "Welfare stamp of Rs. 10/- be affixed.",
+    "why": "The Advocates' Welfare Fund stamp is required on the vakalatnama. Its absence is one of the most routine objections raised.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "Affix the Rs.10 Advocates' Welfare Fund stamp on the vakalatnama and cancel it as required."
+    }
+  },
+  {
+    "id": "DHC-OBJ-MEMO-OF-PARTIES",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "missing_document",
+    "text": "Memo of parties be filed duly signed.",
+    "why": "The memo of parties fixes the array of parties and their addresses for service. The Registry will not number a matter without it.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "MEMO_OF_PARTIES" },
+    "fix": {
+      "auto": true,
+      "guidance": "PARAM can generate a memo of parties from the cause title for you to check and sign."
+    }
+  },
+  {
+    "id": "DHC-OBJ-SYNOPSIS",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "missing_document",
+    "text": "List of Dates and synopsis should be filed.",
+    "why": "The synopsis and chronological list of dates is how the bench reads the matter first. It is a mandatory part of the paperbook.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "SYNOPSIS_LIST_OF_DATES" },
+    "fix": {
+      "auto": false,
+      "guidance": "Prepare a synopsis with a chronological list of dates and events up to the impugned order."
+    }
+  },
+  {
+    "id": "DHC-OBJ-LISTING-PROFORMA",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "missing_document",
+    "text": "Listing proforma duly filled in should be filed, both sets.",
+    "why": "The listing proforma drives how the matter is categorised and listed. Filings routinely bounce on this alone.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "LISTING_PROFORMA" },
+    "fix": {
+      "auto": true,
+      "guidance": "PARAM can generate a listing proforma skeleton from the bundle for you to complete."
+    }
+  },
+  {
+    "id": "DHC-OBJ-CERTIFIED-COPY",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "FATAL",
+    "check": "missing_document",
+    "text": "Certified copy of impugned order be given.",
+    "why": "An appeal or revision cannot be entertained without the certified copy of the order challenged, and its dates are what drive the s.12(2) limitation exclusion.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "params": { "docKind": "CERTIFIED_COPY" },
+    "fix": {
+      "auto": false,
+      "guidance": "Apply for and file the certified copy of the impugned order. Keep the application and delivery dates, PARAM uses them for s.12(2)."
+    }
+  },
+  {
+    "id": "DHC-OBJ-ONE-SIDE",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "one_side_foolscap",
+    "text": "All papers be filed on foolscap papers / on one side of the papers.",
+    "why": "The paperbook is prepared single-sided on standard paper so it can be bound and annotated. Mixed page sizes in one bundle indicate a violation.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "Reprint or re-scan so every page is the same size and printed on one side only."
+    }
+  },
+  {
+    "id": "DHC-OBJ-PROVISION",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "REGISTRY_OBJECTION",
+    "check": "provision_check",
+    "text": "Correct and relevant provision of law be given.",
+    "why": "A petition invoking the wrong provision (Art. 226 where Art. 227 lies, or the wrong section of the governing Act) is returned to be corrected.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "needsAi": true,
+    "fix": {
+      "auto": false,
+      "guidance": "Check the provision in the cause title and prayer against the relief actually sought."
+    }
+  },
+  {
+    "id": "DHC-OBJ-BARRED-BY-TIME",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "FATAL",
+    "check": "limitation",
+    "text": "Appeal / petition is barred by time.",
+    "why": "Section 3 of the Limitation Act is mandatory: a court must dismiss a time-barred proceeding even if no party raises limitation. A filing that sits in defect while limitation runs can become unfilable.",
+    "source": "High Court of Delhi — List of Common Objections (CRLR)",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": true,
+      "guidance": "File an application under s.5 of the Limitation Act explaining every single day of delay. PARAM can draft one with a day-by-day chart."
+    }
+  },
+  {
+    "id": "DHC-OBJ-ANNEXURE-STAMP",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "ADVISORY",
+    "check": "manual",
+    "text": "Annexure be stamped @ 65 paisa per 360 words.",
+    "why": "Annexures attract stamp at the prescribed rate. PARAM cannot see the physical stamps on a scan, so this is surfaced as a reminder, not a finding.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "Verify the stamp affixed on each annexure against the prescribed rate before filing."
+    }
+  },
+  {
+    "id": "DHC-OBJ-CAVEAT",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "ADVISORY",
+    "check": "manual",
+    "text": "Caveat report is to be obtained at the time of each subsequent filing.",
+    "why": "A caveat lodged by the opposite side must be checked at every fresh filing. This is a Registry step PARAM cannot perform for you.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "Obtain a fresh caveat report from the Registry before presenting the filing."
+    }
+  },
+  {
+    "id": "DHC-OBJ-NOTICE-OF-MOTION",
+    "court": "DELHI_HIGH_COURT",
+    "caseTypes": [],
+    "severity": "ADVISORY",
+    "check": "manual",
+    "text": "Notice of Motion with proof of service effected upon Respondent be filed.",
+    "why": "Where advance service is required, proof of service must accompany the filing.",
+    "source": "High Court of Delhi — List of Common Objections",
+    "sourceUrl": "https://www.delhihighcourt.nic.in/web/faqs/list-of-common-objections",
+    "verifiedOn": "2026-09-08",
+    "status": "verified",
+    "fix": {
+      "auto": false,
+      "guidance": "File the notice of motion together with proof of advance service on the respondent."
+    }
+  }
+]
