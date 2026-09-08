@@ -27,7 +27,8 @@ export async function GET(req: Request) {
 
   try {
     const result = await repairBundle(bundle, { paginate, index });
-    const name = `${slug(bundle.title)}-repaired.pdf`;
+    const reviewRequired = result.warnings.some(w => w.code !== "SOURCE_SIGNATURES");
+    const name = reviewRequired ? "document-compilation-review.pdf" : `${slug(bundle.title)}-paperbook.pdf`;
     return new Response(new Uint8Array(result.pdf), {
       headers: {
         "Content-Type": "application/pdf",
@@ -36,7 +37,9 @@ export async function GET(req: Request) {
         "X-Param-Pages": String(result.totalPages),
         "X-Param-Missing": String(result.missing.length),
         "X-Param-Stamped": String(result.stamped),
-        "X-Param-Manual-Repagination": String(result.needsManualRepagination.length),
+        "X-Param-Own-Pagination": String(result.carryOwnPagination.length),
+        "X-Param-Index-Pages": String(result.indexPages),
+        "X-Param-Review-Required": String(result.warnings.some(w => w.code !== "SOURCE_SIGNATURES")),
       },
     });
   } catch (e) {
@@ -47,7 +50,7 @@ export async function GET(req: Request) {
   }
 }
 
-/** Dry run: what the repair would produce, without building the file. */
+/** Build and validate the same assembly as the download, returning its plan. */
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) return json({ error: "Not signed in." }, 401);
@@ -65,8 +68,17 @@ export async function POST(req: Request) {
       contents: r.contents,
       missing: r.missing,
       stamped: r.stamped,
-      // Pages PARAM will not silently double-number; see lib/fix/repair.ts.
-      needsManualRepagination: r.needsManualRepagination,
+      /*
+        Documents that print their own internal pagination. Not a defect: a
+        paperbook routinely contains judgments footed "Page 3 of 10". Reported
+        so the advocate is not surprised to see two numbers on a page and knows
+        the top-right stamp is the paperbook's.
+      */
+      carryOwnPagination: r.carryOwnPagination,
+      indexPages: r.indexPages,
+      normalizedPages: r.normalizedPages,
+      warnings: r.warnings,
+      signatureAppearancesPreserved: r.signatureAppearancesPreserved,
     });
   } catch (e) {
     return json(

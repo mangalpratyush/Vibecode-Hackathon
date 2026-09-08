@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
-import { storageMode } from "@/lib/store";
 import Sidebar from "@/components/portal/Sidebar";
 
 /**
@@ -18,15 +17,13 @@ export default async function PortalLayout({
   if (!user) redirect("/");
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper lg:flex-row">
-      <Sidebar
-        name={user.name}
-        role={user.role === "ADVOCATE" ? "Advocate" : "Filing clerk"}
-        storageMode={storageMode()}
-      />
+    <div className="portal-canvas flex min-h-screen flex-col lg:flex-row">
+      <Sidebar name={user.name} role={user.role === "ADVOCATE" ? "Advocate" : "Filing clerk"} />
       {/* min-w-0 so wide tables inside can scroll instead of stretching the grid. */}
-      <main className="min-w-0 flex-1">
-        <div className="mx-auto max-w-5xl px-6 py-9 lg:px-10 lg:py-12">{children}</div>
+      <main className="relative min-w-0 flex-1 overflow-hidden">
+        <div className="relative z-10 mx-auto max-w-6xl px-5 py-8 sm:px-7 lg:px-9 lg:py-10 xl:px-11">
+          {children}
+        </div>
       </main>
     </div>
   );

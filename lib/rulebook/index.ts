@@ -24,6 +24,9 @@ export const RULES: Rule[] = [
 
 /** Rules that may actually raise a defect: right court, right case type, verified. */
 export function activeRules(court: CourtId, caseTypeId: string): Rule[] {
+  // No verified rulebook for this court yet. Returning Delhi's rules here would
+  // be inventing authority, so nothing court-specific runs and the memo says so.
+  if (court === "OTHER") return [];
   return RULES.filter(
     (r) =>
       r.court === court &&

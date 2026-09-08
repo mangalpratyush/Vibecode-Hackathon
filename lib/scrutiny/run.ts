@@ -3,6 +3,7 @@ import { activeRules, caseTypeById } from "../rulebook";
 import { aiAvailable } from "../ai/provider";
 import { CHECKS, MANUAL_ONLY, NON_DETERMINISTIC } from "./checks";
 import { computeLimitation } from "./limitation";
+import { scoreFiling } from "./score";
 
 /**
  * Scrutiny orchestrator.
@@ -124,9 +125,12 @@ export function runScrutiny(bundle: Bundle): ScrutinyResult {
       a.ruleId.localeCompare(b.ruleId)
   );
 
+  const score = scoreFiling({ defects, passed, skipped, limitation });
+
   return {
     bundleId: bundle.id,
     ranAt: new Date().toISOString(),
+    score,
     court: bundle.court,
     caseTypeId: bundle.caseTypeId,
     defects,

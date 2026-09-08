@@ -204,6 +204,54 @@ body {
   box-shadow: 0 1px 2px rgba(36, 31, 30, 0.04), 0 10px 28px -22px rgba(36, 31, 30, 0.45);
 }
 
+/* ── Logged-in workspace ───────────────────────────────────────────────────
+   Soft paper light, faint filing-grid lines and a restrained gold glow make
+   the portal feel like the working side of the same judicial product as the
+   sign-in screen. The surfaces below are intentionally generous: this is a
+   review tool, so hierarchy and legibility matter more than dashboard density.
+*/
+.portal-canvas {
+  background-color: #f5f0e8;
+  background-image:
+    radial-gradient(circle at 88% 3%, rgba(179, 129, 58, 0.13), transparent 26rem),
+    radial-gradient(circle at 10% 92%, rgba(123, 40, 50, 0.06), transparent 28rem),
+    linear-gradient(rgba(72, 57, 48, 0.026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(72, 57, 48, 0.022) 1px, transparent 1px);
+  background-size: auto, auto, 72px 72px, 72px 72px;
+}
+
+.workspace-card {
+  background: rgba(255, 253, 249, 0.96);
+  border: 1px solid rgba(218, 207, 195, 0.9);
+  border-radius: 22px;
+  box-shadow:
+    0 1px 1px rgba(48, 37, 31, 0.03),
+    0 20px 50px -34px rgba(48, 37, 31, 0.45);
+  backdrop-filter: blur(10px);
+}
+
+.workspace-dark {
+  color: #f8f1e8;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(202, 151, 72, 0.18), transparent 18rem),
+    linear-gradient(145deg, #182d42 0%, #102236 54%, #281d20 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 22px;
+  box-shadow: 0 22px 50px -32px rgba(20, 25, 31, 0.72);
+}
+
+@keyframes portal-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.portal-enter {
+  animation: portal-enter 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-enter { animation: none; }
+}
+
 /* Small uppercase label above a heading or a group of fields. */
 .eyebrow {
   font-size: 10.5px;
@@ -219,4 +267,111 @@ body {
   background: var(--paper-raised);
   border: 1px solid var(--rule);
   box-shadow: 0 1px 2px rgba(36, 31, 30, 0.04), 0 10px 28px -22px rgba(36, 31, 30, 0.45);
+}
+
+/* ── Court stationery ────────────────────────────────────────────────────────
+   The visual vocabulary is the one the work already has: rubber stamps, ruled
+   paperbook sheets, annexure tabs and legal redlining. None of it is decoration
+   for its own sake, each piece carries the meaning a lawyer already reads it
+   with, which is why it beats a generic dashboard here.
+*/
+
+/* Registry stamp. Rotated, double-ruled, letterpress-ish: the mark the counter
+   puts on your filing. Colour is inherited so severity drives it. */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2.5px solid currentColor;
+  box-shadow: 0 0 0 1.5px #fff, 0 0 0 3.5px currentColor;
+  border-radius: 4px;
+  padding: 0.55rem 1.1rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  transform: rotate(-3.5deg);
+  opacity: 0.92;
+  /* Slight ink mottling so it reads as pressed, not printed. */
+  background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+.stamp-sm {
+  padding: 0.3rem 0.7rem;
+  border-width: 2px;
+  box-shadow: 0 0 0 1px #fff, 0 0 0 2.5px currentColor;
+  letter-spacing: 0.09em;
+}
+
+/* Ruled paperbook sheet: the 4 cm left margin rule PARAM itself checks for. */
+.sheet {
+  background: var(--paper-raised);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(36, 31, 30, 0.05), 0 12px 30px -24px rgba(36, 31, 30, 0.5);
+}
+.sheet::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 2.25rem;
+  width: 1px;
+  background: rgba(155, 42, 48, 0.18);
+}
+
+/* Annexure tab, for the active step in the paperbook index. */
+.tab-active {
+  position: relative;
+}
+.tab-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--brand);
+}
+
+/* Legal redlining. Lawyers mark up with strikethrough and underline, not with
+   a git diff, so a redline here looks like a redline on a draft. */
+.redline del {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: rgba(155, 42, 48, 0.75);
+  color: #8d5a5e;
+  background: rgba(155, 42, 48, 0.07);
+}
+.redline ins {
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: rgba(31, 111, 74, 0.8);
+  color: #1c5c3d;
+  background: rgba(31, 111, 74, 0.09);
+  font-weight: 600;
+}
+
+/* Cause-title block, set the way a petition sets it. */
+.cause-title {
+  text-align: center;
+  line-height: 1.75;
+  letter-spacing: 0.02em;
+}
+
+/* An endorsement quoted verbatim off a certified copy. */
+.endorsement {
+  font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, monospace;
+  font-size: 11.5px;
+  line-height: 1.6;
+  background: #fbf7f0;
+  border-left: 2px solid var(--gold);
+  padding: 0.55rem 0.8rem;
+  color: #4a423e;
+}
+
+/* Wax-seal disc for the integrity certificate. */
+.wax-seal {
+  background: radial-gradient(circle at 34% 30%, #9c3742 0%, #7b2832 45%, #5d1b23 100%);
+  box-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.22), inset 0 -3px 7px rgba(0, 0, 0, 0.32),
+    0 6px 16px -8px rgba(93, 27, 35, 0.7);
 }

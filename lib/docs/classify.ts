@@ -101,12 +101,65 @@ export interface ClassifyResult {
 }
 
 /**
- * Classify without any network call. Filename evidence outranks content
- * evidence, and both are scored so the UI can show how sure we are — a
- * mis-classification is the advocate's to correct, not something to hide.
+ * Phrases that settle what a document IS, whatever someone named the file.
+ *
+ * The filename pass below is deliberately trusting, and on a bundle an
+ * advocate assembled by hand that is right. It was wrong on real court files.
+ * "DHC-writ-11742-2025.pdf" is a judgment delivered in a writ petition, but
+ * "writ" sits in the PETITION filename rule, so every judgment we tested
+ * against came back labelled Petition / Appeal. That produced a wrong index,
+ * and it hid the impugned order from the limitation engine, which is the one
+ * date the whole calculation turns on.
+ *
+ * So a few phrases get to speak over the filename. Each is something a
+ * document can only really say about itself: a court announcing its coram, a
+ * registry endorsing a certified copy, a petitioner sheweth-ing. Anything
+ * weaker stays in RULES below, where the filename still wins.
+ *
+ * Order matters. A judgment reproduces the prayer it is deciding and a
+ * petition quotes the order it impugns, so the party's own voice is read
+ * before the court's.
  */
+const DECISIVE: { kind: DocKind; re: RegExp }[] = [
+  {
+    kind: "VAKALATNAMA",
+    re: /\bvakalatnama\b|do\s+hereby\s+appoint\s+and\s+retain/i,
+  },
+  {
+    kind: "CERTIFIED_COPY",
+    re: /certified\s+(?:to\s+be\s+a\s+)?true\s+copy|date\s+of\s+application\s+for\s+(?:certified\s+)?copy|date\s+on\s+which\s+(?:the\s+)?copy\s+was\s+(?:made\s+)?ready/i,
+  },
+  {
+    kind: "PETITION",
+    re: /most\s+respectfully\s+sheweth|therefore\s+most\s+respectfully\s+pray/i,
+  },
+  {
+    kind: "IMPUGNED_ORDER",
+    // "J U D G M E N T" letterspaced as a heading, never the running word.
+    re: /\bcoram\s*:|\bj\s+u\s+d\s+g\s+m\s+e\s+n\s+t\b|\bo\s+r\s+d\s+e\s+r\b|judgment\s+(?:was\s+)?(?:pronounced|delivered|reserved)\s+on|(?:pronounced|reserved)\s+on\s*:|this\s+is\s+a\s+digitally\s+signed\s+(?:order|judgment)/i,
+  },
+];
+
+/**
+ * Classify without any network call. A decisive phrase wins outright; failing
+ * that, filename evidence outranks content evidence. Both are scored so the UI
+ * can show how sure we are, because a mis-classification is the advocate's to
+ * correct, not something to hide.
+ */
+export function isUnfilledPrescribedForm(fileName: string, text: string): boolean {
+  const head = text.slice(0, 7000);
+  return /here\s+(?:insert|specify)\s+(?:the\s+)?(?:name|court)|S\.?L\.?P\.?\s*\(Civil\)\s*No\.?\s*\.{4,}/i.test(head)
+    && /prescribed|form|NO\.?\s*28|special\s+leave\s+petition/i.test(fileName + " " + head);
+}
+
 export function classifyDocument(fileName: string, text: string): ClassifyResult {
+  // A downloaded specimen is not the petition needed to satisfy a filing check.
+  if (isUnfilledPrescribedForm(fileName, text)) return { kind: "UNKNOWN", source: "keywords", confidence: 95 };
   const head = text.slice(0, 4000);
+
+  for (const d of DECISIVE) {
+    if (d.re.test(head)) return { kind: d.kind, source: "keywords", confidence: 92 };
+  }
 
   for (const r of RULES) {
     if (r.file?.test(fileName)) {

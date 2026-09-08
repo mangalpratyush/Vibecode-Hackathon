@@ -1,4 +1,5 @@
 import type { Bundle, ScrutinyResult } from "./types";
+import type { RedlineSet } from "./scrutiny/redlines";
 import { getMongoDb } from "./mongodb";
 
 /**
@@ -25,13 +26,27 @@ const globalForMem = globalThis as unknown as {
   _paramMemStore?: {
     bundles: Map<string, Bundle>;
     results: Map<string, ScrutinyResult>;
+    redlines: Map<string, RedlineSet>;
   };
 };
 
-const mem = (globalForMem._paramMemStore ??= {
-  bundles: new Map<string, Bundle>(),
-  results: new Map<string, ScrutinyResult>(),
-});
+/*
+  Each map is initialised on its own, not as one object literal.
+
+  `globalForMem._paramMemStore ??= { ... }` only builds the object the first
+  time. A process that was already warm keeps the object it made earlier, so
+  adding a new map to this file left a live server with a store that had no
+  `redlines` key and threw on first use. Filling in whatever is missing survives
+  hot reload and any future addition here.
+*/
+const store = (globalForMem._paramMemStore ??= {} as NonNullable<
+  typeof globalForMem._paramMemStore
+>);
+store.bundles ??= new Map<string, Bundle>();
+store.results ??= new Map<string, ScrutinyResult>();
+store.redlines ??= new Map<string, RedlineSet>();
+
+const mem = store;
 
 export const usingMongo = () => Boolean(process.env.MONGODB_URI);
 
@@ -99,6 +114,33 @@ export async function getResult(bundleId: string): Promise<ScrutinyResult | null
   const db = await getMongoDb();
   const doc = await db
     .collection<ScrutinyResult>("results")
+    .findOne({ bundleId }, { projection: { _id: 0 } });
+  return doc ?? null;
+}
+
+// ── Proposed corrections ────────────────────────────────────────────────────
+
+/**
+ * Redlines are kept apart from the scrutiny result because their status is
+ * mutable: the advocate accepts, edits or rejects each one, and re-running the
+ * scrutiny must not silently discard decisions they already made.
+ */
+export async function saveRedlines(set: RedlineSet): Promise<void> {
+  if (!usingMongo()) {
+    mem.redlines.set(set.bundleId, set);
+    return;
+  }
+  const db = await getMongoDb();
+  await db
+    .collection<RedlineSet>("redlines")
+    .replaceOne({ bundleId: set.bundleId }, set, { upsert: true });
+}
+
+export async function getRedlines(bundleId: string): Promise<RedlineSet | null> {
+  if (!usingMongo()) return mem.redlines.get(bundleId) ?? null;
+  const db = await getMongoDb();
+  const doc = await db
+    .collection<RedlineSet>("redlines")
     .findOne({ bundleId }, { projection: { _id: 0 } });
   return doc ?? null;
 }

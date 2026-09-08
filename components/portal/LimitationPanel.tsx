@@ -1,162 +1,47 @@
+import { AlertTriangle, CalendarClock, ChevronDown, Scale } from "lucide-react";
 import type { CaseType, FilingDates, LimitationResult } from "@/lib/types";
 
-/**
- * The limitation computation, shown as working rather than as a verdict.
- *
- * An advocate cannot rely on a number they cannot check. Every step names the
- * provision it applied and the date it produced, so the whole chain can be read
- * against the bare Act in about thirty seconds — which is the difference
- * between a tool a lawyer uses and a tool a lawyer admires.
- */
-export default function LimitationPanel({
-  limitation,
-  caseType,
-  dates,
-}: {
-  limitation: LimitationResult;
-  caseType: CaseType | null;
-  /** Supplied so the panel can say which dates PARAM read for itself. */
-  dates?: FilingDates;
+function dateLabel(value?: string) {
+  if (!value) return "Not supplied";
+  return new Date(value + "T12:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+}
+
+export default function LimitationPanel({ limitation: l, caseType, dates }: {
+  limitation: LimitationResult; caseType: CaseType | null; dates?: FilingDates;
 }) {
-  const l = limitation;
-  // Dates PARAM lifted off the certified copy rather than being told.
-  const readForUs = (
-    [
-      ["pronouncedOn", "pronouncement date"],
-      ["copyAppliedOn", "certified copy applied on"],
-      ["copyReadyOn", "certified copy ready on"],
-    ] as const
-  ).filter(([k]) => dates?.source?.[k] === "regex" || dates?.source?.[k] === "ai");
-
-  if (!l.computed) {
-    return (
-      <section className="card p-6">
-        <Header />
-        <p className="mt-2.5 text-[13.5px] leading-relaxed text-ink-soft">{l.reason}</p>
-        {caseType?.limitationDays !== null && (
-          <p className="mt-2 text-[12.5px] text-ink-soft/80">
-            Add the missing dates to the bundle and re-run to get the computation.
-          </p>
-        )}
-      </section>
-    );
-  }
-
-  const barred = Boolean(l.barred);
-
+  const sourceDates = Object.entries(dates?.source ?? {}).filter(([, source]) => source === "regex" || source === "ai").length;
   return (
-    <section
-      className={`rounded-xl border p-6 ${
-        barred ? "border-fatal/30 bg-[var(--fatal-bg)]" : "border-pass/30 bg-[var(--pass-bg)]"
-      }`}
-    >
-      <Header />
-
-      <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-2">
-        <div className="text-[19px] font-bold text-ink">
-          {barred ? (
-            <>
-              Out of time by{" "}
-              <span className="num text-fatal">
-                {l.daysOverdue} day{l.daysOverdue === 1 ? "" : "s"}
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="num text-pass">
-                {l.daysRemaining} day{l.daysRemaining === 1 ? "" : "s"}
-              </span>{" "}
-              remaining
-            </>
-          )}
+    <section className="audit-panel">
+      <header className="audit-panel-head">
+        <div className="flex items-center gap-3"><Scale size={20} color="#96713e" /><h2 className="audit-panel-title">Limitation review</h2></div>
+        <span className="audit-badge" data-tone={!l.computed ? "advisory" : l.barred ? "fatal" : "pass"}>{!l.computed ? "Not computed" : l.barred ? "Outside limitation" : "Within limitation"}</span>
+      </header>
+      {!l.computed ? (
+        <div className="p-6"><p className="audit-sub">{l.reason ?? "Insufficient information to calculate limitation."}</p>
+          {caseType?.limitationDays != null && <p className="audit-note mt-3">Complete the missing dates in Verification and run scrutiny again.</p>}
         </div>
-        <div className="num text-[13px] text-ink-soft">
-          Limitation expires <strong className="font-semibold text-ink">{l.dueOn}</strong>
-        </div>
-      </div>
-
-      {/* The working */}
-      <ol className="mt-5 space-y-0 border-t border-black/10">
-        {l.steps.map((s, i) => (
-          <li
-            key={i}
-            className="grid gap-x-5 gap-y-1 border-b border-black/10 py-3 sm:grid-cols-[13rem_1fr_6rem]"
-          >
-            <div>
-              <div className="text-[13px] font-semibold text-ink">{s.label}</div>
-              {s.provision && (
-                <div className="mt-0.5 text-[11.5px] leading-snug text-ink-soft">
-                  {s.provision}
-                </div>
-              )}
+      ) : (
+        <>
+          <div className="audit-time-summary">
+            <div><div className="audit-kicker"><CalendarClock size={14} />Based on intended filing</div>
+              <strong style={{ color: l.barred ? "#a33f38" : "#326e51" }}>{l.barred ? l.daysOverdue + " days overdue" : l.daysRemaining + " days remaining"}</strong>
             </div>
-            <p className="text-[12.5px] leading-relaxed text-ink-soft">{s.detail}</p>
-            <div className="num text-[12.5px] font-medium text-ink sm:text-right">
-              {s.runningDate ?? ""}
-            </div>
-          </li>
-        ))}
-      </ol>
-
-      {l.condonationNeeded && (
-        <div
-          className={`mt-5 rounded-lg px-4 py-3.5 ${
-            l.condonationAvailable === false
-              ? "border border-fatal/35 bg-white/60"
-              : "bg-white/60"
-          }`}
-        >
-          <p className="eyebrow">
-            {l.condonationAvailable === false
-              ? "Condonation is not available"
-              : "Condonation required"}
-          </p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-ink">{l.condonationNote}</p>
-        </div>
+            <dl className="audit-time-dates">
+              <div><dt>Last permissible date</dt><dd>{dateLabel(l.dueOn)}</dd></div>
+              <div><dt>Intended filing</dt><dd>{dateLabel(dates?.filingOn)}</dd></div>
+            </dl>
+          </div>
+          {l.condonationNeeded && <div className="mx-6 mb-5 audit-notice" data-tone={l.condonationAvailable === false ? "error" : undefined}><AlertTriangle /><div><strong>{l.condonationAvailable === false ? "Condonation unavailable. " : "Condonation required. "}</strong>{l.condonationNote}</div></div>}
+          <details className="audit-working">
+            <summary><span>Review the calculation <span style={{ color: "#8d8171", fontWeight: 400 }}>· {l.steps.length} steps with statutory sources</span></span><ChevronDown /></summary>
+            <ol className="audit-timeline">{l.steps.map((s, i) => (
+              <li key={i}><span className="audit-timeline-number">{i + 1}</span><div><h4>{s.label}</h4>{s.provision && <small>{s.provision}</small>}<p>{s.detail}</p></div><time>{s.runningDate ? dateLabel(s.runningDate) : ""}</time></li>
+            ))}</ol>
+            {sourceDates > 0 && <p className="audit-note px-6 pb-4">Dates extracted from your documents are used in this calculation. Compare them with the certified copy endorsement.</p>}
+          </details>
+        </>
       )}
-
-      {readForUs.length > 0 && (
-        <p className="mt-4 rounded-lg bg-white/60 px-3.5 py-2.5 text-[12px] leading-relaxed text-ink-soft">
-          <strong className="font-semibold text-ink">Read from your documents:</strong>{" "}
-          {provenanceSentence(readForUs.map(([, label]) => label))}
-        </p>
-      )}
-
-      <p className="mt-4 text-[11.5px] leading-relaxed text-ink-soft">
-        Computed on the dates supplied. PARAM does not certify that a matter is or is
-        not within time — limitation turns on facts beyond the four dates above,
-        including acknowledgment (s.18), part payment (s.19) and time spent bona fide
-        in a wrong court (s.14). Check the working before you rely on it.
-      </p>
+      <p className="audit-note border-t border-rule px-6 py-3">Computed from supplied dates. Acknowledgment, part payment and time spent in another court may affect limitation. Check the working before relying on it.</p>
     </section>
-  );
-}
-
-/**
- * Built as a string rather than as JSX.
- *
- * The JSX version of this sentence interleaved four singular/plural ternaries
- * with prose and lost a space between an expression and the text after it,
- * rendering "PARAM took theseoff the certified copy". Assembling the sentence
- * in one place makes the spacing explicit and the grammar checkable.
- */
-function provenanceSentence(labels: string[]): string {
-  const one = labels.length === 1;
-  return (
-    `${labels.join(", ")}. ` +
-    `PARAM took ${one ? "this" : "these"} off the certified copy's own endorsement ` +
-    `rather than asking you to type ${one ? "it" : "them"}. ` +
-    `Check ${one ? "it" : "them"} against the copy before relying on the computation.`
-  );
-}
-
-function Header() {
-  return (
-    <div className="flex items-baseline justify-between gap-4">
-      <h2 className="eyebrow">
-        Limitation
-      </h2>
-      <span className="text-[11px] text-ink-soft/70">Limitation Act, 1963</span>
-    </div>
   );
 }

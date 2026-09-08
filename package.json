@@ -10,10 +10,8 @@
     "lint": "eslint",
     "seed": "node scripts/seed-mongo.mjs",
     "demo": "node scripts/make-demo-bundle.mjs",
-    "selftest": "node scripts/selftest.mjs",
-    "test:assistant": "node scripts/assistant-test.mjs",
     "seed:demo": "node scripts/seed-demo.mjs",
-    "test:fix": "node scripts/test-fix-draft.mjs"
+    "reset": "node scripts/reset-workspace.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

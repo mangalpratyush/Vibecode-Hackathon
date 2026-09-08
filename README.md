@@ -31,16 +31,14 @@ computation all run on a clean checkout.
 ### See it work
 
 ```bash
-npm run seed:demo        # generates the bundle and seeds it on advocate@param.demo,
-                         # so "Explore the live demo" lands on a real memo
-npm run selftest         # asserts every planted defect is caught, both courts
-npm run test:fix         # date extraction, bundle repair, condonation draft
-npm run test:assistant   # asks the Assistant in 6 languages, checks none are refused
+npm run demo             # builds a paperbook with defects planted on purpose
+npm run seed:demo        # seeds it on advocate@param.demo, so "Explore the live demo"
+                         # lands on a real memo
 npm run seed             # MongoDB collections + indexes (only if MONGODB_URI is set)
 ```
 
-`make-demo-bundle.mjs` prints the dates to enter on the form. Upload the seven
-PDFs from `demo-bundle/` and PARAM will find, among others, that **Annexure P-7
+`npm run demo` prints the dates to enter on the form and writes seven PDFs to
+`demo-bundle/`. Upload them and PARAM will find, among others, that **Annexure P-7
 is relied on at pages 6 and 9 of the petition and is not in the bundle** — open
 the PDF at page 6 and check.
 
@@ -169,8 +167,8 @@ lib/
   ai/tasks.ts              language detection + the Assistant prompt
 scripts/
   make-demo-bundle.mjs     builds a bundle with defects planted on purpose
-  selftest.mjs             end-to-end assertion that they are all caught
-  assistant-test.mjs       the Assistant asked in six languages
+  seed-demo.mjs            uploads it and runs scrutiny on the demo account
+  reset-workspace.mjs      clears every stored filing
 ```
 
 Next.js 16 · TypeScript · Tailwind 4 · MongoDB (optional) · pdfjs-dist ·
@@ -183,7 +181,7 @@ pdf-lib · pdfkit · three.
 | `AUTH_SECRET` | **Required.** Signs the session cookie. |
 | `MONGODB_URI` | Bundles are kept in memory and lost on restart. The header says so. |
 | `GEMINI_API_KEYS` (or `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`) | The Assistant and the four AI-assisted checks are disabled with a clear message. Everything else is unaffected. |
-| `GEMINI_MODEL` | Defaults to `gemini-flash-lite-latest`, which mishandles Indian scripts — **pin `gemini-flash-latest`**. See below. |
+| `GEMINI_MODEL` | Defaults to `gemini-flash-lite-latest`, which is correct. Do not move to `gemini-flash-latest`: same capability here, but a 20-requests-per-day cap. |
 
 Comma-separate several keys in `GEMINI_API_KEYS` to get rotation: on a 429 or 503
 the next key is tried immediately rather than waiting out the window.
@@ -197,9 +195,12 @@ Three things had to be right, and each failed first:
    *no* rules, and an empty context — whereupon the model concluded the question
    was out of scope and declined it. It now falls back to handing over the whole
    verified rulebook, which is 31 short rows.
-2. **The model.** `gemini-flash-lite-latest` answered a Devanagari question about
-   vakalatnama stamps with a paragraph about the Andaman and Nicobar Islands.
-   `gemini-flash-latest` reads all of these scripts correctly.
+2. **The test harness, not the model.** `gemini-flash-lite-latest` appeared to
+   answer a Devanagari question with unrelated text, so PARAM was moved onto
+   `gemini-flash-latest`. That was wrong twice over: the garbled input was curl
+   mangling UTF-8 on Windows, not the model, and flash-latest turned out to be a
+   20-requests-per-DAY free tier that exhausted mid-build. Re-tested properly
+   from Node, flash-lite answers Hindi, Tamil and Bengali in-script every time.
 3. **The token budget.** Indic scripts tokenise several times less efficiently
    than Latin, so a flat cap cut Tamil and Bengali answers off mid-sentence. The
    budget now varies by script.

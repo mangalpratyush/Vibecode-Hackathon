@@ -7,11 +7,18 @@
 
 // ── Courts and case types ───────────────────────────────────────────────────
 
-export type CourtId = "SUPREME_COURT" | "DELHI_HIGH_COURT";
+/**
+ * Courts the RULEBOOK covers. "OTHER" is any court PARAM can read and identify
+ * but has no verified rules for yet, which is most of them. Recognising a
+ * Bombay High Court filing and saying so beats refusing to read it or, worse,
+ * silently scrutinising it against Delhi rules.
+ */
+export type CourtId = "SUPREME_COURT" | "DELHI_HIGH_COURT" | "OTHER";
 
 export const COURTS: { id: CourtId; name: string; short: string }[] = [
   { id: "SUPREME_COURT", name: "Supreme Court of India", short: "SC" },
   { id: "DELHI_HIGH_COURT", name: "High Court of Delhi", short: "DHC" },
+  { id: "OTHER", name: "Another court or tribunal", short: "—" },
 ];
 
 export interface CaseType {
@@ -160,6 +167,20 @@ export interface Bundle {
   courtFeePaid?: number;
   /** Suit valuation where relevant, in rupees. */
   valuation?: number;
+  /** The court as printed on the filing, including ones with no rulebook. */
+  courtName?: string;
+  /** Case number as printed, e.g. "W.P.(C) 11742/2025". */
+  caseNumber?: string;
+  /** What PARAM read off the documents, with the line it read each from. */
+  detected?: DetectedMatter;
+  /**
+   * Set when the advocate has reviewed the extraction and confirmed the inputs.
+   * The stepper marks stage II complete on it, and it is the record that a
+   * person, not a classifier, stands behind the dates the limitation ran on.
+   */
+  extractionConfirmedAt?: string;
+  /** Set when a Filing Integrity Seal was last issued for this bundle. */
+  sealedAt?: string;
 }
 
 export interface FilingDates {
@@ -173,6 +194,19 @@ export interface FilingDates {
   filingOn?: string;
   /** Where each date came from, so the UI can show provenance. */
   source?: Partial<Record<keyof Omit<FilingDates, "source">, "user" | "ai" | "regex">>;
+}
+
+/** Mirrors lib/docs/detect, declared here so Bundle can carry it. */
+export interface DetectedValue<T> {
+  value: T;
+  evidence: string;
+  from: string;
+}
+export interface DetectedMatter {
+  court?: DetectedValue<{ id: string; name: string; hasRulebook: boolean }>;
+  caseType?: DetectedValue<{ id: string | null; code: string; name: string }>;
+  caseNumber?: DetectedValue<string>;
+  parties?: DetectedValue<{ petitioner: string; respondent: string; title: string }>;
 }
 
 // ── Scrutiny output ─────────────────────────────────────────────────────────
@@ -234,6 +268,27 @@ export interface LimitationStep {
   days?: number;
 }
 
+/**
+ * Declared here rather than in lib/scrutiny/score so ScrutinyResult can carry
+ * the score without types.ts and score.ts importing each other.
+ */
+export type Verdict =
+  | "WILL_BE_RETURNED"
+  | "LIKELY_OBJECTIONS"
+  | "READY_WITH_NOTES"
+  | "CLEAR";
+
+export interface FilingScore {
+  score: number;
+  verdict: Verdict;
+  headline: string;
+  /** Why the score cannot go higher, in the user's words. Null when nothing caps it. */
+  cappedBy: string | null;
+  band: { floor: number; ceiling: number };
+  breakdown: { label: string; count: number; delta: number }[];
+  incompleteCoverage: boolean;
+}
+
 export interface ScrutinyResult {
   bundleId: string;
   ranAt: string;
@@ -241,6 +296,8 @@ export interface ScrutinyResult {
   caseTypeId: string;
   defects: Defect[];
   limitation: LimitationResult;
+  /** The gated Registry Filing Score. See lib/scrutiny/score. */
+  score?: FilingScore;
   /** Checks that ran and found nothing — shown so the advocate sees coverage. */
   passed: { ruleId: string; text: string }[];
   /** Checks skipped because they need an AI key or missing input. */

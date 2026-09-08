@@ -81,16 +81,30 @@ const LABELS: { key: keyof FilingDates; patterns: RegExp[] }[] = [
       /date\s+(?:when|on\s+which)\s+(?:the\s+)?copy\s+was\s+(?:ready|prepared)[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
       /copy\s+(?:was\s+)?(?:made\s+)?ready\s+on[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
       /date\s+of\s+(?:preparation|readiness)[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
-      // Delivery is the fallback for readiness: the copy cannot be delivered
-      // before it is ready, so it is the conservative substitute.
-      /date\s+of\s+delivery[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
-      /(?:copy\s+)?delivered\s+on[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
+      /*
+        Delivery is the fallback for readiness: a copy cannot be delivered
+        before it is ready, so it is the conservative substitute.
+
+        But the word "copy" is REQUIRED here, and "judgment"/"order" must not
+        precede it. Without that guard, a real Delhi High Court judgment headed
+        "Judgment Delivered on: 26.08.2025" had its pronouncement date read as
+        the certified copy's delivery date. That silently invents a s.12(2)
+        exclusion and produces a limitation verdict that is confident and wrong,
+        which is the exact failure this whole extraction stage exists to stop.
+      */
+      /date\s+of\s+delivery\s+of\s+(?:the\s+)?(?:certified\s+)?copy[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
+      /(?<!judgment\s)(?<!judgement\s)(?<!order\s)(?:certified\s+)?copy\s+(?:was\s+)?delivered\s+on[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
+      // Bare "Date of delivery:" is safe only on a copying-section endorsement,
+      // which is why it is last and only consulted when nothing better matched.
+      /date\s+of\s+delivery\s*[:\-]\s*([^\n]{0,40})/i,
     ],
   },
   {
     key: "pronouncedOn",
     patterns: [
-      /(?:judgment|judgement|order)\s+(?:was\s+)?pronounced\s+on[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
+      // Real courts write this several ways: "Judgment pronounced on:",
+      // "Judgment Delivered on:", "Reserved on … Pronounced on:".
+      /(?:judgment|judgement|order)\s+(?:was\s+)?(?:pronounced|delivered|reserved\s+and\s+pronounced)\s+on[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
       /pronounced\s+on[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
       /date\s+of\s+(?:judgment|judgement|order|decision|decree)[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
       /(?:decided|delivered)\s+on[^\n:]*[:\-]?\s*([^\n]{0,40})/i,
@@ -114,9 +128,23 @@ export interface DateExtraction {
  * limitation computation that is silently off by weeks.
  */
 export function extractFilingDates(documents: BundleDocument[]): DateExtraction {
-  const sources = documents.filter(
+  /*
+    Prefer the documents that carry the endorsement, but do not stop there.
+
+    Restricting the search to CERTIFIED_COPY and IMPUGNED_ORDER was tuned to a
+    bundle this project generated, where those kinds were always classified
+    correctly. Handed a real judgment the classifier calls it something else,
+    and every date was missed. So: read the preferred kinds when they exist,
+    otherwise read whatever has text. The labels are specific enough
+    ("pronounced on", "date of application for copy") that a false positive
+    elsewhere is unlikely, and the ordering sanity checks below still apply.
+  */
+  const preferred = documents.filter(
     (d) => d.kind === "CERTIFIED_COPY" || d.kind === "IMPUGNED_ORDER"
   );
+  const sources = preferred.length
+    ? preferred
+    : documents.filter((d) => d.text.trim().length > 80);
   const out: DateExtraction = { dates: {}, evidence: {} };
   if (!sources.length) return out;
 

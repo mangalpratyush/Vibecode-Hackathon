@@ -17,7 +17,10 @@ import PDFDocument from "pdfkit";
  *   6. The vakalatnama carries no welfare-stamp endorsement
  *   7. The affidavit carries no attestation clause
  *   8. There is no listing proforma and no memo of parties in the bundle
- *   9. The dates are the interesting part. On the face of it the filing is 13
+ *   9. The petition's cause title names two respondents where the impugned
+ *      order names three. This is the substantive defect: it cannot be measured,
+ *      only read, so it exercises the AI-assisted check and the redline path.
+ *  10. The dates are the interesting part. On the face of it the filing is 13
  *      days out of time, which is what every dropdown limitation calculator
  *      will tell you. Read the certified copy's own endorsement, exclude the
  *      18 days requisite for obtaining it under s.12(2), and notice that the
@@ -190,6 +193,13 @@ async function main() {
         "",
         "CORAM: HON'BLE MR. JUSTICE A. K. MEHTA",
         "Pronounced on: 28.05.2026",
+        "",
+        "IN THE MATTER OF:",
+        "Rajesh Sharma ... Petitioner",
+        "VERSUS",
+        "1. State of NCT of Delhi",
+        "2. Commissioner of Police, Delhi",
+        "3. Deputy Commissioner of Police (South) ... Respondents",
         ...LOREM(1),
       ],
     });
@@ -244,6 +254,7 @@ async function main() {
   console.log("  Vernacular pages with no English translation filed");
   console.log("  No welfare stamp on the vakalatnama, no attestation on the affidavit");
   console.log("  No memo of parties, no listing proforma");
+  console.log("  Cause title names 2 respondents; the impugned order names 3");
   console.log("\nSuggested dates for the scrutiny form:");
   console.log("  Impugned order pronounced   2026-05-28");
   console.log("  Certified copy applied for  2026-06-05");

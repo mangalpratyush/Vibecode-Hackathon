@@ -1,256 +1,188 @@
 "use client";
 
+import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { Languages, Send, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpRight, BookOpen, Check, ChevronDown, Copy, FileSearch, FolderOpen, Languages, LoaderCircle, MessageSquarePlus, RotateCcw, Scale, ShieldCheck, X } from "lucide-react";
 
-/**
- * The PARAM Assistant, as a screen.
- *
- * It replies in the language the question was asked in — English, हिंदी, বাংলা,
- * தமிழ், or romanised Hinglish — and the language is decided server-side from
- * the script of the question rather than guessed by the model.
- *
- * The bundle selector is the point of the page rather than a nicety. With a
- * bundle chosen, anything specific to it is grounded in what the deterministic
- * engine actually found; without one, the Assistant answers on the rulebook and
- * general practice and says so. Making that switch visible stops the user from
- * assuming an answer is about their matter when it is not.
- */
+export interface BundleOption { id: string; title: string; caseTypeCode: string }
+interface Turn { id: number; question: string; answer?: string; error?: string; sources?: string[] }
 
-interface Msg {
-  role: "user" | "assistant";
-  text: string;
-}
-
-export interface BundleOption {
-  id: string;
-  title: string;
-  caseTypeCode: string;
-}
-
-const SUGGESTIONS = [
-  "What is the time requisite for obtaining a certified copy?",
-  "वकालतनामा पर वेलफेयर स्टाम्प कितने रुपये का लगता है?",
-  "Section 34 me delay condone ho sakta hai kya?",
-  "What must go into a Supreme Court paperbook?",
-  "সার্টিফায়েড কপি পেতে যে সময় লাগে তা কি বাদ যায়?",
+const PROMPTS = [
+  { icon: FileSearch, title: "Understand an objection", detail: "Make sense of a finding and what to do next.", general: "How should I read a Registry defect memo?", filing: "Explain the most important defects found in this filing and what I should review first." },
+  { icon: Scale, title: "Check limitation", detail: "Understand dates, exclusions and delay.", general: "How does time spent obtaining a certified copy affect limitation?", filing: "Explain the limitation calculation for this filing, including any missing information." },
+  { icon: BookOpen, title: "Prepare the paperbook", detail: "Get clarity on documents and filing requirements.", general: "What belongs in a Supreme Court paperbook?", filing: "Based on this filing's findings, what should I check before preparing the paperbook?" },
+  { icon: ShieldCheck, title: "Plan the next step", detail: "Turn your review into a practical checklist.", general: "How do I use PARAM to review a filing before submission?", filing: "Give me a short checklist of the next steps for this filing based on the recorded findings." },
 ];
 
-export default function AssistantPanel({
-  bundles,
-  aiReady,
-  initialBundleId = "",
-}: {
-  bundles: BundleOption[];
-  aiReady: boolean;
-  initialBundleId?: string;
+export default function AssistantPanel({ bundles, aiReady, initialBundleId = "" }: {
+  bundles: BundleOption[]; aiReady: boolean; initialBundleId?: string;
 }) {
   const [bundleId, setBundleId] = useState(initialBundleId);
-  const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [conversations, setConversations] = useState<Record<string, Turn[]>>({});
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [copied, setCopied] = useState<number | null>(null);
+  const [copyError, setCopyError] = useState("");
+  const [showLatest, setShowLatest] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const sequence = useRef(0);
+  const nearBottom = useRef(true);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const grounded = bundles.find((b) => b.id === bundleId);
+  const turns = conversations[bundleId] ?? [];
 
+  useEffect(() => () => { abortRef.current?.abort(); if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
   useEffect(() => {
-    scrollRef.current?.scrollTo({
-      top: scrollRef.current.scrollHeight,
-      behavior: "smooth",
-    });
-  }, [msgs, busy]);
+    if (nearBottom.current) {
+      scrollRef.current?.scrollTo({ top: conversations[bundleId]?.length ? scrollRef.current.scrollHeight : 0, behavior: "instant" });
+    }
+  }, [conversations, busy, bundleId]);
+  useEffect(() => {
+    if (!inputRef.current) return;
+    inputRef.current.style.height = "auto";
+    inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 140) + "px";
+  }, [input]);
 
-  async function ask(question: string) {
+  function updateTurn(scope: string, id: number, changes: Partial<Turn>) {
+    setConversations((all) => ({ ...all, [scope]: (all[scope] ?? []).map((t) => t.id === id ? { ...t, ...changes } : t) }));
+  }
+
+  async function ask(question: string, retryId?: number) {
     const q = question.trim();
-    if (!q || busy) return;
-    setInput("");
-    setMsgs((m) => [...m, { role: "user", text: q }]);
+    if (!q || busy || !aiReady) return;
+    const scope = bundleId;
+    const id = retryId ?? ++sequence.current;
+    if (retryId) updateTurn(scope, id, { error: undefined });
+    else {
+      setConversations((all) => ({ ...all, [scope]: [...(all[scope] ?? []), { id, question: q }] }));
+      setInput("");
+    }
     setBusy(true);
+    setConfirmClear(false);
+    nearBottom.current = true;
+    setShowLatest(false);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
       const res = await fetch("/api/assistant", {
-        method: "POST",
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-        body: JSON.stringify({ question: q, bundleId }),
+        method: "POST", headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify({ question: q, bundleId: scope }), signal: controller.signal,
       });
       const data = await res.json();
-      setMsgs((m) => [
-        ...m,
-        { role: "assistant", text: data.answer ?? data.error ?? "No answer came back." },
-      ]);
-    } catch {
-      setMsgs((m) => [
-        ...m,
-        { role: "assistant", text: "Could not reach the server. Try again." },
-      ]);
+      if (!res.ok || typeof data.answer !== "string" || !data.answer.trim()) {
+        throw new Error(data.error || "No answer came back. Please try again.");
+      }
+      updateTurn(scope, id, { answer: data.answer, sources: Array.isArray(data.citedRules) ? [...new Set<string>(data.citedRules.filter((s: unknown) => typeof s === "string"))] : [] });
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      updateTurn(scope, id, { error: error instanceof TypeError ? "The connection was interrupted. Please try again." : error instanceof Error ? error.message : "Something went wrong. Please try again." });
     } finally {
-      setBusy(false);
-      inputRef.current?.focus();
+      if (!controller.signal.aborted) { setBusy(false); inputRef.current?.focus({ preventScroll: true }); }
     }
   }
 
-  const grounded = bundles.find((b) => b.id === bundleId);
+  function changeContext(value: string) {
+    setBundleId(value);
+    setCopyError("");
+    setCopied(null);
+    setInput("");
+    setConfirmClear(false);
+    setShowLatest(false);
+    nearBottom.current = true;
+    const url = new URL(window.location.href);
+    if (value) url.searchParams.set("bundle", value); else url.searchParams.delete("bundle");
+    window.history.replaceState(null, "", url.pathname + url.search);
+  }
+
+  async function copyAnswer(turn: Turn) {
+    try {
+      await navigator.clipboard.writeText(turn.answer || "");
+      setCopied(turn.id);
+      setCopyError("");
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(null), 2000);
+    } catch { setCopyError("Copy is unavailable in this browser. You can select and copy the answer text."); }
+  }
 
   return (
-    // dvh, not vh: on mobile browsers the address bar makes vh taller than the
-    // visible viewport, which would push the composer off the bottom of the
-    // screen — the one control that must always be reachable.
-    <div className="card flex h-[calc(100dvh-17rem)] min-h-[28rem] flex-col overflow-hidden">
-      {/* ── Context bar ── */}
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-rule bg-[#fcfaf7] px-5 py-3">
-        <label className="flex items-center gap-2.5">
-          <span className="eyebrow">Grounded in</span>
-          <select
-            value={bundleId}
-            onChange={(e) => setBundleId(e.target.value)}
-            className="max-w-[22rem] rounded-lg border border-rule bg-white px-2.5 py-1.5 text-[12.5px] text-ink outline-none transition focus:border-[var(--brand)]/50"
-          >
-            <option value="">No bundle — rulebook and general practice</option>
-            {bundles.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.caseTypeCode} · {b.title}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <span className="ml-auto flex items-center gap-1.5 text-[11.5px] text-ink-soft">
-          <Languages className="h-[14px] w-[14px]" strokeWidth={1.8} />
-          Replies in the language you ask in
-        </span>
+    <section className="pa-workspace" aria-label="PARAM Assistant workspace">
+      <header className="pa-context">
+        <span className="pa-context-icon"><FolderOpen size={21} strokeWidth={1.7} /></span>
+        <div className="pa-context-field">
+          <label htmlFor="assistant-filing">CONVERSATION CONTEXT</label>
+          <div className="pa-select-wrap">
+            <select id="assistant-filing" value={bundleId} onChange={(e) => changeContext(e.target.value)} disabled={busy}>
+              <option value="">General registry practice</option>
+              {bundles.map((b) => <option key={b.id} value={b.id}>{b.title} · {b.caseTypeCode}</option>)}
+            </select>
+            <ChevronDown size={16} aria-hidden />
+          </div>
+        </div>
+        <span className={"pa-context-tag" + (grounded ? " is-filing" : "")}><span />{grounded ? "Filing selected" : "Rulebook context"}</span>
+        <button className="pa-new-chat" disabled={!turns.length || busy} onClick={() => setConfirmClear(true)} title="New conversation in this context"><MessageSquarePlus size={18} /><span>New conversation</span></button>
       </header>
 
-      {/* ── Transcript ── */}
-      <div ref={scrollRef} className="thin-scroll flex-1 overflow-y-auto px-5 py-6">
-        {msgs.length === 0 ? (
-          <div className="mx-auto max-w-2xl">
-            {!aiReady && (
-              <div className="mb-6 rounded-xl border border-objection/25 bg-[var(--objection-bg)] px-4 py-3 text-[12.5px] leading-relaxed text-objection">
-                No AI key is configured, so the Assistant cannot answer freely yet. Add{" "}
-                <code className="font-mono">GEMINI_API_KEYS</code> (or{" "}
-                <code className="font-mono">ANTHROPIC_API_KEY</code>) to{" "}
-                <code className="font-mono">.env.local</code> and restart. The scrutiny
-                engine, rulebook and limitation computation all run without a key and are
-                unaffected.
-              </div>
-            )}
+      {confirmClear && <div className="pa-clear-confirm" role="alert">
+        <span>Clear this conversation? These messages are only kept for this session.</span>
+        <button onClick={() => { setConversations((all) => ({ ...all, [bundleId]: [] })); setConfirmClear(false); setCopyError(""); setCopied(null); inputRef.current?.focus(); }}>Clear messages</button>
+        <button aria-label="Cancel clearing conversation" onClick={() => setConfirmClear(false)}><X size={17} /></button>
+      </div>}
 
-            <div className="flex items-start gap-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--brand-soft)] text-[15px] font-black text-[var(--brand)]">
-                प
-              </span>
-              <div>
-                <h2 className="font-serif text-[22px] leading-tight text-ink">
-                  Ask about anything you are about to file.
-                </h2>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-ink-soft">
-                  Registry objections, what belongs in a paperbook, vakalatnama and
-                  affidavit requirements, court fee, annexures and translations,
-                  limitation and condonation — and the bundle you have open.
-                  {grounded ? (
-                    <>
-                      {" "}
-                      Answers about <strong className="text-ink">{grounded.title}</strong>{" "}
-                      come from what the scrutiny actually found, never from guesswork.
-                    </>
-                  ) : (
-                    <> Pick a bundle above to ground answers in your own filing.</>
-                  )}
-                </p>
+      {!aiReady && <div className="pa-unavailable" role="status"><ShieldCheck size={20} /><div><strong>The Assistant is not connected yet.</strong><p>An AI provider needs to be configured to answer questions. Your filing checks still work, and you can browse the <Link href="/rulebook">rulebook</Link>.</p></div></div>}
+
+      <div className="pa-transcript" ref={scrollRef} tabIndex={0} aria-label="Conversation" onScroll={() => {
+        const el = scrollRef.current;
+        if (el) { nearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 90; setShowLatest(!nearBottom.current); }
+      }}>
+        {!turns.length ? <div className="pa-welcome">
+          <h2>What would you like<br className="pa-mobile-break" /> to understand?</h2>
+          <p className="pa-welcome-intro">Ask about a finding, a filing requirement, or your next step.</p>
+          <div className="pa-prompts">
+            {PROMPTS.map(({ icon: Icon, title, detail, general, filing }) => <button type="button" key={title} disabled={!aiReady} onClick={() => ask(grounded ? filing : general)}>
+              <span className="pa-prompt-icon"><Icon size={22} strokeWidth={1.65} /></span>
+              <span><strong>{title}</strong><span>{detail}</span></span>
+              <ArrowUpRight size={17} className="pa-prompt-arrow" />
+            </button>)}
+          </div>
+        </div> : <div className="pa-messages">
+          {turns.map((turn) => <article className="pa-turn" key={turn.id} aria-label="Question and answer">
+            <div className="pa-question"><p className="pa-message-label">YOU</p><div dir="auto">{turn.question}</div></div>
+            <div className="pa-answer">
+              <Image src="/brand/param-mark.svg" alt="" width={29} height={29} />
+              <div className="pa-answer-content">
+                <div className="pa-answer-heading"><strong>PARAM Assistant</strong><span>{grounded ? grounded.caseTypeCode + " · Filing context" : "General practice"}</span></div>
+                {turn.answer ? <>
+                  <div className="pa-answer-text" dir="auto">{turn.answer}</div>
+                  <div className="pa-answer-tools">
+                    <button onClick={() => copyAnswer(turn)} aria-label={copied === turn.id ? "Answer copied" : "Copy answer"}>{copied === turn.id ? <Check size={15} /> : <Copy size={15} />}{copied === turn.id ? "Copied" : "Copy answer"}</button>
+                    {!!turn.sources?.length && <details className="pa-sources"><summary><BookOpen size={15} />Rulebook context <span>{turn.sources.length}</span><ChevronDown size={13} /></summary><div><p>Entries supplied to the Assistant. Check the original rule before relying on an answer.</p><ul>{turn.sources.map((source) => <li key={source}>{source}</li>)}</ul><Link href="/rulebook">Read the rulebook <ArrowUpRight size={14} /></Link></div></details>}
+                  </div>
+                </> : turn.error ? <div className="pa-answer-error" role="alert"><p>{turn.error}</p><button onClick={() => ask(turn.question, turn.id)} disabled={busy}><RotateCcw size={15} />Try again</button></div> : <p className="pa-thinking" role="status"><LoaderCircle size={17} />Reading your question and filing context…</p>}
               </div>
             </div>
-
-            <p className="eyebrow mt-8">Try one</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => ask(s)}
-                  className="group flex items-start gap-2.5 rounded-xl border border-rule bg-white px-3.5 py-3 text-left text-[13px] leading-snug text-ink transition hover:border-[var(--brand)]/40 hover:bg-[var(--brand-soft)]/50"
-                >
-                  <Sparkles
-                    className="mt-0.5 h-[14px] w-[14px] shrink-0 text-ink-soft transition group-hover:text-[var(--brand)]"
-                    strokeWidth={1.8}
-                  />
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="mx-auto max-w-2xl space-y-5">
-            {msgs.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
-                {m.role === "assistant" && (
-                  <p className="eyebrow mb-1.5">PARAM Assistant</p>
-                )}
-                <div
-                  className={
-                    m.role === "user"
-                      ? "max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-[var(--brand)] px-4 py-2.5 text-[13.5px] leading-relaxed text-white"
-                      : "whitespace-pre-wrap text-[14px] leading-[1.75] text-ink"
-                  }
-                >
-                  {m.text}
-                </div>
-              </div>
-            ))}
-
-            {busy && (
-              <div>
-                <p className="eyebrow mb-1.5">PARAM Assistant</p>
-                <span className="flex gap-1.5">
-                  {[0, 1, 2].map((i) => (
-                    <span
-                      key={i}
-                      className="h-1.5 w-1.5 animate-bounce rounded-full bg-ink-soft/45"
-                      style={{ animationDelay: `${i * 130}ms` }}
-                    />
-                  ))}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
+          </article>)}
+        </div>}
       </div>
 
-      {/* ── Composer ── */}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          ask(input);
-        }}
-        className="border-t border-rule bg-[#fcfaf7] px-5 py-4"
-      >
-        <div className="mx-auto flex max-w-2xl items-end gap-2.5">
-          <textarea
-            ref={inputRef}
-            rows={1}
-            value={input}
+      <div className="pa-composer-area">
+        {showLatest && turns.length > 0 && <button className="pa-jump" onClick={() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }); }}><ArrowDown size={15} />Latest message</button>}
+        {copyError && <p className="pa-copy-error" role="status">{copyError}</p>}
+        <form className="pa-composer" onSubmit={(e) => { e.preventDefault(); ask(input); }}>
+          <label htmlFor="assistant-question" className="sr-only">Your question to PARAM Assistant</label>
+          <textarea ref={inputRef} id="assistant-question" rows={2} value={input} maxLength={6000} disabled={!aiReady}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                ask(input);
-              }
-            }}
-            placeholder="Ask in English, हिंदी, বাংলা, தமிழ், मराठी…"
-            className="max-h-40 flex-1 resize-none rounded-xl border border-rule bg-white px-3.5 py-2.5 text-[13.5px] leading-relaxed text-ink outline-none transition placeholder:text-ink-soft/55 focus:border-[var(--brand)]/50"
-          />
-          <button
-            type="submit"
-            disabled={busy || !input.trim()}
-            aria-label="Ask"
-            className="grid h-[42px] w-[42px] shrink-0 place-items-center rounded-xl bg-[var(--brand)] text-white transition hover:bg-[var(--brand-dark)] disabled:opacity-40"
-          >
-            <Send className="h-[16px] w-[16px]" strokeWidth={1.9} />
-          </button>
-        </div>
-        <p className="mx-auto mt-2.5 max-w-2xl text-[11px] leading-snug text-ink-soft/80">
-          Grounded in PARAM&apos;s rulebook and, when a bundle is selected, that
-          bundle&apos;s findings. Not legal advice, and not a substitute for reading the
-          rule.
-        </p>
-      </form>
-    </div>
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); ask(input); } }}
+            placeholder={grounded ? "Ask about this filing, a finding, or your next step…" : "Ask about registry practice or filing requirements…"} />
+          <div className="pa-composer-bottom"><span><Languages size={16} /><span>Ask in any language</span></span><span className="pa-key-hint">Shift + Enter for a new line</span><button type="submit" disabled={busy || !aiReady || !input.trim()} aria-label="Send question">{busy ? <LoaderCircle size={18} className="pa-spin" /> : <ArrowUp size={19} />}<span>Send</span></button></div>
+        </form>
+        <div className="pa-context-note"><span>{grounded ? "Uses this filing’s recorded findings and rulebook context." : "Select a filing above for questions about your own matter."}</span>{grounded && <Link href={"/case/" + bundleId + "/score"}>View scrutiny <ArrowUpRight size={13} /></Link>}</div>
+        <p className="pa-disclaimer">Each question is assessed independently. Verify the source rule before filing. This is decision support, not legal advice.</p>
+      </div>
+      <span className="sr-only" role="status">{busy ? "PARAM Assistant is preparing an answer." : turns.length ? "Response ready." : ""}</span>
+    </section>
   );
 }

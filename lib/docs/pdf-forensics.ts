@@ -57,6 +57,14 @@ function detectScript(text: string): PageForensics["script"] {
  */
 function readPrintedPageNo(items: PdfTextItem[], heightPt: number): number | null {
   const band = heightPt * 0.09;
+  // PARAM's assembled copy keeps source numbering, so prefer its explicit,
+  // reserved header over any number belonging to the reproduced document.
+  const header = items.filter(it => heightPt - (it.transform?.[5] ?? 0) <= band)
+    .map(it => it.str.trim()).join(" ");
+  const bookNumber = header.match(/\bPage\s+(\d{1,6})\s+of\s+\d{1,6}\b/i);
+  if (bookNumber && /\b(?:INDEX|DOCUMENT\s+\d+)\b/.test(header)) {
+    return Number(bookNumber[1]);
+  }
   const candidates: { n: number; edge: number }[] = [];
   for (const it of items) {
     const s = it.str.trim();

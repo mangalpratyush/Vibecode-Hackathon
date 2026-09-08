@@ -2,75 +2,116 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   BookOpenCheck,
-  FilePlus2,
-  Files,
+  FolderClosed,
   LogOut,
-  MessagesSquare,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
 
 /**
- * Portal navigation.
+ * The rail IS the filing.
  *
- * A left rail rather than a top bar because this is a working tool, not a
- * marketing site: the four destinations are permanent, an advocate moves
- * between them constantly, and vertical space is what a defect memo needs least.
+ * The five stages are the navigation; everything else (all filings, the
+ * rulebook) is secondary and sits below a rule.
  *
- * The Assistant is a destination here, not a floating bubble. A chat that
- * hovers over the document you are reading is a support widget; a chat that
- * sits alongside the rulebook and the memo is part of the tool.
+ * The rail deliberately does NOT report progress. It carried a green tick on
+ * every stage it considered complete, and that reads as a claim the rail
+ * cannot honestly make: going back to stage II to correct a date leaves the
+ * later ticks standing, so the sidebar says the scrutiny is done when the
+ * thing it scrutinised has since changed. A stage the advocate has not opened
+ * looked different from one they had, which invited the same misreading in
+ * reverse. So it is a plain set of tabs: the one you are on is highlighted,
+ * the rest are identical. Progress belongs on the page that can state it
+ * precisely, not on a permanent tick in the corner of the eye.
  */
 
-const NAV = [
-  {
-    href: "/dashboard",
-    label: "Bundles",
-    hint: "Filings under scrutiny",
-    icon: Files,
-  },
-  {
-    href: "/new",
-    label: "New scrutiny",
-    hint: "Upload a bundle",
-    icon: FilePlus2,
-  },
-  {
-    href: "/rulebook",
-    label: "Rulebook",
-    hint: "Every rule and its source",
-    icon: BookOpenCheck,
-  },
-  {
-    href: "/assistant",
-    label: "PARAM Assistant",
-    hint: "Ask in any language",
-    icon: MessagesSquare,
-  },
-];
+const STAGES = [
+  { n: "I", label: "Bundle", slug: "bundle" },
+  { n: "II", label: "Verification", slug: "extraction" },
+  { n: "III", label: "Registry scrutiny", slug: "score" },
+  { n: "IV", label: "Cure and seal", slug: "cure" },
+  { n: "V", label: "PARAM Assistant", slug: "assistant" },
+] as const;
+
+interface CaseState {
+  /** Which bundle this describes, so a stale fetch cannot label the wrong case. */
+  id: string;
+  title: string;
+}
 
 export default function Sidebar({
   name,
   role,
-  storageMode,
 }: {
   name: string;
   role: string;
-  storageMode: "mongodb" | "memory";
 }) {
   const pathname = usePathname() ?? "";
+  const searchParams = useSearchParams();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [state, setState] = useState<CaseState | null>(null);
 
-  const isActive = (href: string) =>
-    href === "/dashboard"
-      ? pathname === "/dashboard" || pathname.startsWith("/scrutiny")
-      : pathname.startsWith(href);
+  /*
+    The case in the URL, if any.
+
+    Two shapes carry it: /case/<id>/... for stages I to IV, and /assistant?bundle=<id>
+    for stage V. Reading only the path left the Assistant showing an empty rail
+    even though it is a stage of the very filing being discussed.
+  */
+  const bundleId =
+    pathname.match(/^\/case\/([^/]+)/)?.[1] ??
+    (pathname.startsWith("/assistant") ? searchParams.get("bundle") : null);
+
+  useEffect(() => {
+    if (!bundleId) return;
+    let live = true;
+    fetch(`/api/bundle/${bundleId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!live || !d) return;
+        setState({ id: bundleId, title: d.title });
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+    // Re-read on every navigation within the case: the title is detected from
+    // the documents, so it can change under the rail without a reload.
+  }, [bundleId, pathname]);
+
+  /*
+    Derived, not stored. Clearing this with setState inside the effect would be
+    a state write during render-commit, and it would also show the previous
+    case's title for a frame when moving between filings. Comparing the id is
+    both cheaper and more correct.
+  */
+  const current = state && state.id === bundleId ? state : null;
+  const started = Boolean(bundleId);
+
+  const activeIndex = pathname.includes("/assistant")
+    ? 4
+    : !started
+      ? 0
+      : pathname.includes("/cure")
+        ? 3
+        : pathname.includes("/score")
+          ? 2
+          : pathname.includes("/bundle")
+            ? 0
+            : 1;
+
+  const hrefFor = (i: number) => {
+    if (STAGES[i].slug === "assistant") return bundleId ? `/assistant?bundle=${bundleId}` : "/assistant";
+    // Nothing to show for a stage of a filing that does not exist yet.
+    if (!started) return "/new";
+    return `/case/${bundleId}/${STAGES[i].slug}`;
+  };
 
   async function signOut() {
     setSigningOut(true);
@@ -81,8 +122,7 @@ export default function Sidebar({
 
   return (
     <>
-      {/* Mobile: the rail collapses to a bar with a toggle. */}
-      <div className="no-print sticky top-0 z-40 flex items-center gap-3 border-b border-rule bg-[var(--shell)] px-4 py-3 lg:hidden">
+      <div className="no-print sticky top-0 z-40 flex items-center gap-3 border-b border-black/30 bg-[var(--shell)] px-4 py-3 lg:hidden">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -99,72 +139,83 @@ export default function Sidebar({
       </div>
 
       <aside
-        /*
-          self-start matters: as a flex child the rail would otherwise stretch to
-          the full height of the page, and a sticky element that is already as
-          tall as its container has nothing to stick to. Constrained to one
-          viewport, it pins while the memo scrolls past it.
-        */
-        className={`no-print z-30 w-[264px] shrink-0 flex-col border-r border-black/30 bg-[var(--shell)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:self-start ${
+        className={`no-print z-30 w-[268px] shrink-0 flex-col border-r border-black/30 bg-[var(--shell)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:self-start ${
           open ? "flex" : "hidden"
         }`}
       >
-        <div className="hidden px-5 pb-1 pt-6 lg:block">
+        <div className="hidden px-5 pb-5 pt-6 lg:block">
           <Wordmark />
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-5">
-          {NAV.map(({ href, label, hint, icon: Icon }) => {
-            const active = isActive(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setOpen(false)}
-                aria-current={active ? "page" : undefined}
-                className={`group relative flex items-start gap-3 rounded-xl px-3 py-2.5 transition ${
-                  active
-                    ? "bg-white/[0.07] text-[var(--shell-ink)]"
-                    : "text-[var(--shell-ink-soft)] hover:bg-white/[0.04] hover:text-[var(--shell-ink)]"
-                }`}
-              >
-                {/* Active marker: a gold rule down the left edge. */}
-                <span
-                  aria-hidden
-                  className={`absolute left-0 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r-full bg-[#c8933f] transition-opacity ${
-                    active ? "opacity-100" : "opacity-0"
-                  }`}
-                />
-                <Icon
-                  className="mt-[1px] h-[17px] w-[17px] shrink-0"
-                  style={{ color: active ? "#d3a052" : undefined }}
-                  strokeWidth={1.8}
-                />
-                <span className="min-w-0">
-                  <span className="block text-[13.5px] font-medium leading-tight">
-                    {label}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[11px] leading-tight text-[var(--shell-ink-soft)]/75">
-                    {hint}
-                  </span>
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="space-y-3 border-t border-white/10 px-4 py-4">
-          {storageMode === "memory" && (
-            <p
-              title="No MONGODB_URI configured. Bundles live in memory and are lost when the server restarts."
-              className="rounded-lg border border-[#c8933f]/30 bg-[#c8933f]/10 px-2.5 py-1.5 text-[10.5px] leading-snug text-[#e0bc7d]"
-            >
-              In-memory storage — bundles clear on restart
+        {/* ── The filing ── */}
+        <div className="px-4">
+          <p className="px-2 text-[9.5px] font-bold uppercase tracking-[0.2em] text-[var(--shell-ink-soft)]/70">
+            {started ? "This filing" : "New filing"}
+          </p>
+          {current?.title && (
+            <p className="mt-2 line-clamp-2 px-2 text-[11.5px] leading-snug text-[var(--shell-ink)]/85">
+              {current.title}
             </p>
           )}
+        </div>
 
+        <nav aria-label="Filing stages" className="mt-3 px-3">
+          <ol className="space-y-0.5">
+            {STAGES.map((s, i) => {
+              const active = i === activeIndex;
+              /*
+                Never locked. An advocate who wants to look ahead at what the
+                scrutiny will check, or jump back to fix a date, should not be
+                walled into a corridor. Before anything is uploaded every stage
+                points at the upload screen, which is where the work has to
+                start anyway.
+              */
+              return (
+                <li key={s.n}>
+                  <Link
+                    href={hrefFor(i)}
+                    onClick={() => setOpen(false)}
+                    aria-current={active ? "page" : undefined}
+                    className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2.5 transition ${
+                      active ? "bg-white/[0.07]" : "hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-[#c8933f] transition-opacity ${
+                        active ? "opacity-100" : "opacity-0"
+                      }`}
+                    />
+                    <span
+                      className={`w-6 shrink-0 font-serif text-[12.5px] leading-none ${
+                        active ? "text-[#d3a052]" : "text-[var(--shell-ink-soft)]/60"
+                      }`}
+                    >
+                      {s.n}
+                    </span>
+                    <span
+                      className={`flex-1 text-[13px] font-medium leading-tight ${
+                        active ? "text-[var(--shell-ink)]" : "text-[var(--shell-ink-soft)]/80"
+                      }`}
+                    >
+                      {s.label}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+
+        {/* ── Secondary ── */}
+        <div className="mt-6 space-y-0.5 border-t border-white/10 px-3 pt-4">
+          <Secondary href="/filings" icon={FolderClosed} label="All filings" pathname={pathname} />
+          <Secondary href="/rulebook" icon={BookOpenCheck} label="Rulebook" pathname={pathname} />
+        </div>
+
+        <div className="mt-auto border-t border-white/10 px-4 py-4">
           <div className="flex items-center gap-2.5">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 text-[12px] font-semibold text-[var(--shell-ink)]">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 text-[11.5px] font-semibold text-[var(--shell-ink)]">
               {initials(name)}
             </span>
             <span className="min-w-0 flex-1 leading-tight">
@@ -190,22 +241,44 @@ export default function Sidebar({
   );
 }
 
+function Secondary({
+  href,
+  icon: Icon,
+  label,
+  pathname,
+}: {
+  href: string;
+  icon: typeof FolderClosed;
+  label: string;
+  pathname: string;
+}) {
+  const active = pathname.startsWith(href);
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-[12.5px] transition ${
+        active
+          ? "bg-white/[0.06] text-[var(--shell-ink)]"
+          : "text-[var(--shell-ink-soft)] hover:bg-white/[0.04] hover:text-[var(--shell-ink)]"
+      }`}
+    >
+      <Icon className="h-[15px] w-[15px] shrink-0" strokeWidth={1.8} />
+      {label}
+    </Link>
+  );
+}
+
 function Wordmark() {
   return (
-    <Link href="/dashboard" className="flex items-center gap-2.5">
-      <Image
-        src="/brand/param-mark.svg"
-        alt=""
-        width={34}
-        height={34}
-        className="rounded-[9px]"
-      />
+    <Link href="/new" className="flex items-center gap-2.5">
+      <Image src="/brand/param-mark.svg" alt="" width={34} height={34} className="rounded-[9px]" />
       <span className="leading-none">
         <span className="block text-[16px] font-black tracking-[0.16em] text-[var(--shell-ink)]">
           PARAM
         </span>
-        <span className="mt-1 block text-[8.5px] font-semibold uppercase tracking-[0.17em] text-[#c8933f]">
-          Pre Assessment Registry &amp; Audit Mitra
+        <span className="mt-1 block text-[8px] font-semibold uppercase leading-[1.35] tracking-[0.11em] text-[#c8933f]">
+          <span className="block">Pre Assessment Registry</span>
+          <span className="block">and Audit Mitra</span>
         </span>
       </span>
     </Link>

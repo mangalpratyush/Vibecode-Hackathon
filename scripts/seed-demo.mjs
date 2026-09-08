@@ -21,7 +21,7 @@ import path from "node:path";
 
 const BASE = process.argv[2] || process.env.PARAM_URL || "http://127.0.0.1:3111";
 const DIR = path.join(process.cwd(), "demo-bundle");
-const TITLE = "Sharma v. State of NCT of Delhi — SLP (C) against judgment dt. 28.05.2026";
+const TITLE = "SAMPLE · Sharma v. State of NCT of Delhi, SLP (C) against judgment dt. 28.05.2026";
 
 // Dates deliberately left OFF the form: PARAM reads them off the certified copy.
 // That is the point of the demo, so seeding them by hand would defeat it.
@@ -112,7 +112,7 @@ async function main() {
         : `limitation — within time, ${l.daysRemaining} day(s) left, expires ${l.dueOn}`
     );
 
-  console.log(`\nready: ${BASE}/scrutiny/${upData.bundleId}`);
+  console.log(`\nready: ${BASE}/case/${upData.bundleId}/extraction`);
   console.log('"Explore the live demo" on the sign-in screen now lands on a real memo.');
 }
 

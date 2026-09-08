@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { analysePdf } from "@/lib/docs/pdf-forensics";
 import { classifyDocument, readAnnexureMark } from "@/lib/docs/classify";
 import { extractFilingDates } from "@/lib/docs/dates";
+import { detectMatter, suggestedTitle } from "@/lib/docs/detect";
 import { caseTypeById } from "@/lib/rulebook";
 import { listBundles, saveBundle } from "@/lib/store";
 import { saveDocumentFile } from "@/lib/storage/files";
@@ -17,12 +18,11 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Not signed in." }, { status: 401 });
 
   const form = await req.formData();
-  const court = String(form.get("court") ?? "") as CourtId;
-  const caseTypeId = String(form.get("caseTypeId") ?? "");
-  const title = String(form.get("title") ?? "").trim() || "Untitled filing";
-
-  if (!caseTypeById(caseTypeId))
-    return NextResponse.json({ error: "Unknown case type." }, { status: 400 });
+  // Everything about the matter is OPTIONAL on the form. If the advocate left a
+  // field blank, PARAM reads it off the documents; anything they typed wins.
+  const askedCourt = str(form.get("court")) as CourtId | undefined;
+  const askedCaseType = str(form.get("caseTypeId"));
+  const askedTitle = str(form.get("title"));
 
   const dates: FilingDates = {
     pronouncedOn: str(form.get("pronouncedOn")),
@@ -106,6 +106,34 @@ export async function POST(req: Request) {
     scan would be the wrong kind of clever. Provenance is recorded either way so
     the memo can show where each date came from.
   */
+  /*
+    Read the matter out of the filing.
+
+    Requiring the court and case type up front made PARAM look like it only
+    worked for two courts, and made the advocate retype what is printed on the
+    first page of their own petition. Detection is far wider than the rulebook:
+    an unrecognised court is recorded by name and scrutinised only against the
+    checks that do not depend on a rule we have not verified.
+  */
+  const detected = detectMatter(documents);
+
+  const detectedCourtId = detected.court?.value.id;
+  const court: CourtId =
+    askedCourt && askedCourt !== "OTHER"
+      ? askedCourt
+      : detectedCourtId === "SUPREME_COURT" || detectedCourtId === "DELHI_HIGH_COURT"
+        ? detectedCourtId
+        : "OTHER";
+
+  const detectedCaseTypeId = detected.caseType?.value.id ?? undefined;
+  const caseTypeId =
+    (askedCaseType && caseTypeById(askedCaseType) ? askedCaseType : undefined) ??
+    (detectedCaseTypeId && caseTypeById(detectedCaseTypeId) ? detectedCaseTypeId : undefined) ??
+    "";
+
+  const title =
+    askedTitle ?? suggestedTitle(detected) ?? "Untitled filing";
+
   const found = extractFilingDates(documents);
   for (const key of ["pronouncedOn", "copyAppliedOn", "copyReadyOn"] as const) {
     if (dates[key]) {
@@ -127,6 +155,9 @@ export async function POST(req: Request) {
     dates,
     courtFeePaid: num(form.get("courtFeePaid")),
     valuation: num(form.get("valuation")),
+    courtName: detected.court?.value.name ?? undefined,
+    caseNumber: detected.caseNumber?.value,
+    detected,
   };
 
   await saveBundle(bundle);
@@ -135,6 +166,7 @@ export async function POST(req: Request) {
     bundleId: bundle.id,
     // So a caller can tell the advocate "we read these off your certified copy".
     datesReadFromDocuments: found.evidence,
+    detected,
   });
 }
 
