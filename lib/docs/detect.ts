@@ -211,7 +211,10 @@ function titleCase(s: string): string {
   return s
     .toLowerCase()
     .replace(/\b([a-z])/g, (c) => c.toUpperCase())
-    .replace(/\b(Of|And|The|For|At|In|A|An|Ors|Anr)\b/g, (w) => w.toLowerCase())
+    .replace(/\b(Of|And|The|For|At|In|A|An)\b/g, (w) => w.toLowerCase())
+    // Anr. and Ors. are abbreviations, not small words. Lowercasing them left a
+    // cause title reading "... and anr", which is not how it is written anywhere.
+    .replace(/\b(Anr|Ors)\b\.?/g, (w) => w[0].toUpperCase() + w.slice(1, 3).toLowerCase() + ".")
     .replace(/^./, (c) => c.toUpperCase());
 }
 
