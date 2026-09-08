@@ -60,8 +60,12 @@ async function main() {
   const counts = {
     bundles: await db.collection("bundles").countDocuments(),
     results: await db.collection("results").countDocuments(),
+    files: await db.collection("uploads.files").countDocuments(),
   };
-  console.log(`\nready — ${counts.bundles} bundle(s), ${counts.results} result(s) on record`);
+  console.log(
+    `\nready: ${counts.bundles} bundle(s), ${counts.results} result(s), ` +
+      `${counts.files} stored PDF(s)`
+  );
   await client.close();
 }
 
