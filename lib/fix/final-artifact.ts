@@ -1,11 +1,9 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
 import type { Bundle, ScrutinyResult } from "../types";
 import { normalizeBundle } from "../docs/normalize";
 import { analysePdf } from "../docs/pdf-forensics";
 import { assemblePaperbook, type RepairResult } from "./paperbook";
-import { readDocumentFile } from "../storage/files";
+import { readArtifact, readDocumentFile, saveArtifact } from "../storage/files";
 import { runScrutiny } from "../scrutiny/run";
 import { scoreFiling } from "../scrutiny/score";
 import { signManifest, type Seal, type Manifest } from "../seal/seal";
@@ -39,14 +37,18 @@ export async function finalArtifact(input: Bundle): Promise<FinalArtifact> {
 }
 
 async function build(bundle: Bundle, sources: Map<string,Buffer>, revision: string): Promise<FinalArtifact> {
-  const dir = path.join(process.cwd(),"uploads",bundle.id,"final",revision);
-  try {
-    const saved = JSON.parse(await readFile(path.join(dir,"record.json"),"utf8")) as Omit<FinalArtifact,"pdf">;
-    const pdf = await readFile(path.join(dir,"paperbook.pdf"));
-    if (hash(pdf)!==saved.seal.manifest.documents[0].sha256 || signManifest(saved.seal.manifest)!==saved.seal.seal) throw new Error("Snapshot integrity mismatch");
-    return {...saved,pdf};
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+  // Content-addressed snapshot. Read it back rather than rebuild, so a second
+  // request for the same seal returns the same bytes and the same sealedAt.
+  const recordKey = `final-${revision}.json`, pdfKey = `final-${revision}.pdf`;
+  const [savedRecord, savedPdf] = await Promise.all([
+    readArtifact(bundle.id, recordKey),
+    readArtifact(bundle.id, pdfKey),
+  ]);
+  if (savedRecord && savedPdf) {
+    const saved = JSON.parse(savedRecord.toString("utf8")) as Omit<FinalArtifact,"pdf">;
+    if (hash(savedPdf)!==saved.seal.manifest.documents[0].sha256 || signManifest(saved.seal.manifest)!==saved.seal.seal)
+      throw new Error("Snapshot integrity mismatch");
+    return {...saved,pdf:savedPdf};
   }
   const repaired = await assemblePaperbook(bundle,async d=>sources.get(d.id)||null);
   const pdf = Buffer.from(repaired.pdf);
@@ -104,8 +106,7 @@ async function build(bundle: Bundle, sources: Map<string,Buffer>, revision: stri
   const {pdf:unused,...plan}=repaired;
   void unused;
   const record={fileName,seal,result,plan};
-  await mkdir(dir,{recursive:true});
-  await writeFile(path.join(dir,"paperbook.pdf"),pdf);
-  await writeFile(path.join(dir,"record.json"),JSON.stringify(record));
+  await saveArtifact(bundle.id,pdfKey,pdf);
+  await saveArtifact(bundle.id,recordKey,Buffer.from(JSON.stringify(record)));
   return {...record,pdf};
 }

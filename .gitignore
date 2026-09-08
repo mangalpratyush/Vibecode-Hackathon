@@ -24,3 +24,5 @@ scripts/test-*.mjs
 scripts/qa-*.mjs
 scripts/assistant-test.mjs
 scripts/model-check.mjs
+.vercel
+.env*
