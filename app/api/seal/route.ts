@@ -4,7 +4,7 @@ import { finalArtifact } from "@/lib/fix/final-artifact";
 import { sealCertificate } from "@/lib/seal/certificate";
 import { zipFiles } from "@/lib/seal/zip";
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 60;
 export async function GET(req:Request) {
   const user=await getSessionUser();
   if(!user) return Response.json({error:"Not signed in."},{status:401});

@@ -30,6 +30,8 @@ import type { CaseType, CourtId } from "@/lib/types";
  * cannot be read.
  */
 
+const UPLOAD_LIMIT = 4.4 * 1024 * 1024;
+
 export default function NewBundleForm({
   courts,
   caseTypes,
@@ -66,6 +68,20 @@ export default function NewBundleForm({
     if (busy) return;
     if (!files.length) {
       setError("Add at least one PDF from the filing.");
+      return;
+    }
+    /*
+      The whole filing goes up in one request, and the host rejects a body over
+      4.5 MB before the route ever runs. Caught here it is a sentence naming the
+      files; caught there it is an opaque failure at the worst moment.
+    */
+    const totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+    if (totalBytes > UPLOAD_LIMIT) {
+      setError(
+        `That is ${(totalBytes / 1048576).toFixed(1)} MB of PDFs and the limit for one upload is ` +
+          `${(UPLOAD_LIMIT / 1048576).toFixed(1)} MB. Upload the core filing first, then add the ` +
+          `heavier annexures as a second filing.`
+      );
       return;
     }
     setBusy(true);

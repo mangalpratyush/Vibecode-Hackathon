@@ -2,7 +2,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getBundle } from "@/lib/store";
 import { finalArtifact } from "@/lib/fix/final-artifact";
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 60;
 const json = (body: unknown,status=200) => Response.json(body,{status});
 async function load(id:string) {
   const user=await getSessionUser();

@@ -33,7 +33,7 @@ async function main() {
   console.log(`connected to ${DB}`);
 
   const existing = new Set((await db.listCollections().toArray()).map((c) => c.name));
-  for (const name of ["bundles", "results"]) {
+  for (const name of ["bundles", "results", "redlines", "uploads.files", "uploads.chunks"]) {
     if (existing.has(name)) {
       console.log(`  ${name} — already present`);
     } else {
@@ -47,6 +47,14 @@ async function main() {
   // The dashboard lists a user's bundles newest first.
   await db.collection("bundles").createIndex({ ownerEmail: 1, createdAt: -1 });
   await db.collection("results").createIndex({ bundleId: 1 }, { unique: true });
+  await db.collection("redlines").createIndex({ bundleId: 1 }, { unique: true });
+
+  // The uploaded PDFs live in the GridFS bucket "uploads" when MONGODB_URI is
+  // set, because a serverless deployment has no writable disk to keep them on.
+  // Reads are by filename; deleting a filing sweeps by metadata.bundleId.
+  await db.collection("uploads.files").createIndex({ filename: 1, uploadDate: 1 });
+  await db.collection("uploads.files").createIndex({ "metadata.bundleId": 1 });
+  await db.collection("uploads.chunks").createIndex({ files_id: 1, n: 1 }, { unique: true });
   console.log("  indexes ensured");
 
   const counts = {
