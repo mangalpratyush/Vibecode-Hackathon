@@ -34,6 +34,7 @@ export interface SealedDocument {
 
 export interface Manifest {
   version: typeof MANIFEST_VERSION;
+  scope?: "FINAL_PAPERBOOK";
   bundleId: string;
   title: string;
   court: string;

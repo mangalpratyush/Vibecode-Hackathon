@@ -88,7 +88,7 @@ const RULES: KindRule[] = [
 
 /** "Annexure P-7" / "Annexure P7" / "ANNEXURE-A-1" from a filename or heading. */
 export function readAnnexureMark(fileName: string, text: string): string | undefined {
-  const src = `${fileName}\n${text.slice(0, 600)}`;
+  const src = `${fileName.replace(/_/g, " ")}\n${text.slice(0, 600)}`;
   const m = src.match(/annexure\s*[-–:]?\s*([A-Za-z]{1,2})\s*[-–]?\s*(\d{1,3})/i);
   if (m) return `${m[1].toUpperCase()}-${parseInt(m[2], 10)}`;
   return undefined;
@@ -123,7 +123,7 @@ export interface ClassifyResult {
 const DECISIVE: { kind: DocKind; re: RegExp }[] = [
   {
     kind: "VAKALATNAMA",
-    re: /\bvakalatnama\b|do\s+hereby\s+appoint\s+and\s+retain/i,
+re: /^\s*VAKALATNAMA\s*$|do\s+hereby\s+appoint\s+and\s+retain/im,
   },
   {
     kind: "CERTIFIED_COPY",
@@ -156,6 +156,15 @@ export function classifyDocument(fileName: string, text: string): ClassifyResult
   // A downloaded specimen is not the petition needed to satisfy a filing check.
   if (isUnfilledPrescribedForm(fileName, text)) return { kind: "UNKNOWN", source: "keywords", confidence: 95 };
   const head = text.slice(0, 4000);
+  const name = fileName.replace(/_/g, " ").replace(/^\d+[ .-]*/, "");
+  // A heading/explicit structural filename wins over references inside an index.
+  if (/^index\b/i.test(name) || /^\s*INDEX\b/i.test(head))
+    return { kind: "INDEX", source: "filename", confidence: 98 };
+  if (/check\s*list/i.test(name) || /^\s*Advocate.{0,10}Check\s*List/i.test(head))
+    return { kind: "CHECKLIST", source: "filename", confidence: 98 };
+  if (/^cover\b/i.test(name)) return { kind: "COVER", source: "filename", confidence: 95 };
+  if (/filing[ -]*memo/i.test(name)) return { kind: "FILING_MEMO", source: "filename", confidence: 95 };
+  if (/annexur/i.test(name)) return { kind: "ANNEXURE", source: "filename", confidence: 95 };
 
   for (const d of DECISIVE) {
     if (d.re.test(head)) return { kind: d.kind, source: "keywords", confidence: 92 };

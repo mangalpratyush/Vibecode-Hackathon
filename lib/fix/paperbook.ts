@@ -18,9 +18,9 @@ const INK = rgb(0.08, 0.08, 0.08);
 const RULE = rgb(0.55, 0.55, 0.55);
 const MUTED = rgb(0.27, 0.27, 0.27);
 const ORDER: BundleDocument["kind"][] = [
-  "INDEX", "LISTING_PROFORMA", "MEMO_OF_PARTIES", "SYNOPSIS_LIST_OF_DATES",
+  "COVER", "CHECKLIST", "INDEX", "LISTING_PROFORMA", "MEMO_OF_PARTIES", "SYNOPSIS_LIST_OF_DATES",
   "PETITION", "APPLICATION", "AFFIDAVIT", "VAKALATNAMA", "COURT_FEE",
-  "CERTIFIED_COPY", "IMPUGNED_ORDER", "ANNEXURE", "UNKNOWN",
+  "CERTIFIED_COPY", "IMPUGNED_ORDER", "ANNEXURE", "FILING_MEMO", "UNKNOWN",
 ];
 
 export function orderedDocuments(bundle: Bundle): BundleDocument[] {
@@ -70,7 +70,11 @@ export async function assemblePaperbook(
   const warnings = reviewAssembly(bundle, descriptions);
   const mixed = warnings.some(w => w.code === "MULTIPLE_MATTERS" || w.code === "UNFILLED_TEMPLATE");
   // There is no defensible automatic "main petition" order for a mixed sample.
-  const ordered = mixed ? [...bundle.documents] : orderedDocuments(bundle);
+  const ordered = (mixed ? [...bundle.documents] : orderedDocuments(bundle))
+    .filter(d => !opts.index || d.kind !== "INDEX");
+  if (opts.index && bundle.documents.some(d => d.kind === "INDEX")) warnings.push({
+    code: "INDEX_REPLACED", message: "The uploaded index is replaced by the generated index. Original index pages remain in the source uploads, not duplicated in this paperbook."
+  });
   const byId = new Map(bundle.documents.map((d, i) => [d.id, descriptions[i]]));
   const loaded: { doc: BundleDocument; pdf: PDFDocument; description: DocumentDescription }[] = [];
   const missing: string[] = [];
@@ -244,8 +248,8 @@ function planIndex(bundle: Bundle, rows: IndexRow[], fonts: Fonts, mixed: boolea
   let remaining = firstTop - 40 - BOTTOM;
   rows.forEach((row, index) => {
     const label = wrap(row.label, fonts.bold, 14, width);
-    const detail = wrap(row.detail, fonts.regular, 14, width);
-    const height = Math.max(62, (label.length + detail.length) * LEADING + 20);
+    const detail = row.detail ? wrap(row.detail, fonts.regular, 14, width) : [];
+    const height = Math.max(40, (label.length + detail.length) * LEADING + 12);
     if (height > continuationTop - 40 - BOTTOM) throw new Error("An index entry is too long to fit on one page: " + row.fileName);
     if (height > remaining) {
       if (sheets.length === 1 && sheets[0].rows.length === 0) throw new Error("The filing heading and first index entry do not fit together. Shorten the filing title before exporting.");

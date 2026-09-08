@@ -16,6 +16,7 @@ interface Redline {
 }
 interface Declined { ruleId: string; title: string; reason: string }
 interface RepairPreview {
+  finalScrutiny?: { score: {score:number;verdict:string}; defects: {title:string; detail:string}[]; skipped: {text:string;reason:string}[] };
   totalPages: number;
   indexPages: number;
   normalizedPages: number;
@@ -45,7 +46,7 @@ function saveBlob(blob: Blob, name: string) {
 
 export default function CurePanel({
   bundleId, barred, limitationComputed, initialRedlines, initialDeclined,
-  verdict, score, documentCount, sealedAt,
+  sealedAt,
 }: {
   bundleId: string; barred: boolean; limitationComputed: boolean;
   initialRedlines: Redline[]; initialDeclined: Declined[];
@@ -129,7 +130,7 @@ export default function CurePanel({
   function issueSeal() {
     return request("seal", async () => {
       const data = await jsonResponse(await fetch("/api/seal?bundleId=" + encodeURIComponent(bundleId)));
-      setSeal(data); setNote("Integrity seal issued for the stored documents and their recorded scrutiny result.");
+      setSeal(data); setNote("Integrity seal issued for the final paperbook and its fresh scrutiny result.");
     });
   }
 
@@ -189,6 +190,7 @@ export default function CurePanel({
               <p className="audit-note">A4 pages, a linked index and document bookmarks. Source text and visible signature appearances are retained in a separate copy. This does not complete forms or certify filing readiness.</p>
             </div>
             {preview && <div className="audit-preview">
+              {preview.finalScrutiny && <div className="audit-notice mb-4"><AlertCircle /><div><strong>Final PDF rechecked: {preview.finalScrutiny.score.score}/100</strong><p>{preview.finalScrutiny.defects.length} findings remain; {preview.finalScrutiny.skipped.length} checks need review. Sealing records integrity, not clearance.</p><details className="mt-3"><summary>View remaining findings</summary><ul>{preview.finalScrutiny.defects.map((d,i)=><li className="mt-2" key={i}><strong>{d.title}</strong><p>{d.detail}</p></li>)}</ul></details></div></div>}
               {(preview.warnings?.length ?? 0) > 0 && <div className="audit-notice mb-4" role="status"><AlertCircle /><div><strong>Review before filing</strong><ul className="mt-2 space-y-3">{preview.warnings.map(w => <li key={w.code}>{w.message}{w.fileNames?.length ? <span className="block mt-1 text-[12px]">{w.fileNames.join(", ")}</span> : null}</li>)}</ul></div></div>}
               <div className="flex flex-wrap items-center justify-between gap-3"><h4 className="audit-panel-title">Repair preview</h4><span className="audit-badge" data-tone="pass">{preview.totalPages} pages · {preview.stamped} newly numbered</span></div>
               {preview.missing.length > 0 && <div className="audit-notice mt-4" data-tone="error"><AlertCircle /><span>Files could not be read: {preview.missing.join(", ")}.</span></div>}
@@ -196,9 +198,9 @@ export default function CurePanel({
               {(preview.carryOwnPagination?.length ?? 0) > 0 && <details className="mt-4 audit-notice block"><summary className="cursor-pointer font-semibold">{preview.carryOwnPagination.length} documents already carry printed numbers</summary><p className="mt-2">Original numbering is preserved inside the source page. The separate header carries the continuous paperbook number, including the index.</p><ul className="mt-2 space-y-1">{preview.carryOwnPagination.map(f => <li key={f.fileName}>{f.fileName} · {f.pages} pages</li>)}</ul></details>}
               <table className="audit-table"><caption className="sr-only">Repaired paperbook contents</caption><thead><tr><th>Document</th><th className="text-right">Pages</th></tr></thead><tbody>{preview.contents.map((c,i) => <tr key={c.fileName + i}><td><strong className="font-semibold">{c.label}</strong><span className="block mt-1 text-ink-soft">{c.fileName}</span></td><td className="text-right whitespace-nowrap">{c.from === c.to ? c.from : c.from + "–" + c.to}</td></tr>)}</tbody></table>
             </div>}
-            <div className="audit-draft"><Scale size={21} color="#a78147" /><div><h4>Condonation application</h4><p>{!limitationComputed ? "Eligibility depends on completing the limitation calculation." : barred ? "Request a draft with the delay calculation, subject to eligibility." : "The supplied dates are within time. PARAM will explain if a draft is unnecessary."}</p></div>
+            {limitationComputed && <div className="audit-draft"><Scale size={21} color="#a78147" /><div><h4>Condonation application</h4><p>{!limitationComputed ? "Eligibility depends on completing the limitation calculation." : barred ? "Request a draft with the delay calculation, subject to eligibility." : "The supplied dates are within time. PARAM will explain if a draft is unnecessary."}</p></div>
               <button type="button" className="audit-btn" disabled={busy !== null} onClick={() => download(draftUrl, "draft", "Could not prepare the application.")}>{busy === "draft" ? <Loader2 className="animate-spin" /> : <FilePenLine />}{busy === "draft" ? "Drafting…" : "Request draft"}</button>
-            </div>
+            </div>}
           </section>
 
           <section className="audit-panel" id="corrections">
@@ -227,16 +229,17 @@ export default function CurePanel({
               ? "These files, as they stand now, are fixed to the assessment below. Any later edit will fail verification."
               : "Fix the exact documents and their scrutiny result in a form that makes later changes detectable."}</p>
             <dl className="audit-seal-facts">
-              <div><dt>Documents</dt><dd>{documentCount} covered</dd></div>
-              <div><dt>Assessment</dt><dd>{verdict.replaceAll("_", " ").toLowerCase()} · {score}/100</dd></div>
+              <div><dt>Sealed artifact</dt><dd>{seal ? seal.manifest.documents.length + " final paperbook" : "Prepare final paperbook"}</dd></div>
+              <div><dt>Final assessment</dt><dd>{seal ? seal.manifest.scrutiny.verdict.replaceAll("_", " ").toLowerCase() + " · " + seal.manifest.scrutiny.score + "/100" : "Rechecked when prepared"}</dd></div>
               <div><dt>Algorithm</dt><dd>{seal ? seal.algorithm : "HMAC-SHA256"}</dd></div>
               <div><dt>{seal ? "Issued" : "Last issued"}</dt><dd>{issuedLabel}</dd></div>
             </dl>
             <button type="button" className="audit-btn audit-btn-gold" disabled={busy !== null} onClick={issueSeal}>{busy === "seal" ? <Loader2 className="animate-spin" /> : <ShieldCheck />}{busy === "seal" ? "Issuing seal…" : seal ? "Reissue seal" : "Issue integrity seal"}</button>
             {(seal || sealedAt) && <div className="audit-seal-actions">
               <button type="button" className="audit-btn audit-btn-quiet" disabled={busy !== null} onClick={() => download(certificateUrl, "cert", "Could not render the certificate.")}>{busy === "cert" ? <Loader2 className="animate-spin" /> : <FileCheck2 />}Certificate</button>
-              {seal && <button type="button" className="audit-btn audit-btn-quiet" onClick={() => { saveBlob(new Blob([JSON.stringify(seal, null, 2)], { type: "application/json" }), "param-integrity-manifest.json"); setNote("Manifest downloaded. Use it with the original files on the verification page."); }} disabled={busy !== null}><Download />Manifest</button>}
+              {seal && <button type="button" className="audit-btn audit-btn-quiet" onClick={() => { saveBlob(new Blob([JSON.stringify(seal, null, 2)], { type: "application/json" }), "param-integrity-manifest.json"); setNote("Manifest downloaded. Verify it with the final paperbook PDF downloaded from this case."); }} disabled={busy !== null}><Download />Manifest</button>}
             </div>}
+            <button type="button" className="audit-btn mt-3" disabled={busy !== null} onClick={() => download("/api/seal?bundleId="+encodeURIComponent(bundleId)+"&format=zip", "pack", "Could not prepare sealed pack.")}><Download />Download sealed pack</button>
             <Link href="/verify" target="_blank" className="audit-seal-link">Open public verification<ArrowUpRight /></Link>
             <p className="audit-note">This is an integrity seal. It proves the documents have not changed since sealing. It does not cure a defect and it is not a digital signature.</p>
           </section>

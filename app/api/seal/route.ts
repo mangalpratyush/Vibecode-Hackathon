@@ -1,70 +1,31 @@
 import { getSessionUser } from "@/lib/auth/session";
-import { getBundle, getResult, saveBundle } from "@/lib/store";
-import { runScrutiny } from "@/lib/scrutiny/run";
-import { sealBundle } from "@/lib/seal/seal";
+import { getBundle, saveBundle } from "@/lib/store";
+import { finalArtifact } from "@/lib/fix/final-artifact";
 import { sealCertificate } from "@/lib/seal/certificate";
-
+import { zipFiles } from "@/lib/seal/zip";
 export const runtime = "nodejs";
-export const maxDuration = 60;
-
-/**
- * Seal a scrutinised bundle.
- *
- *   GET /api/seal?bundleId=…            -> manifest + seal as JSON
- *   GET /api/seal?bundleId=…&format=pdf -> the certificate
- *
- * The seal is computed fresh from the stored files each time rather than cached,
- * so it always describes the bytes on disk right now. If someone replaced a
- * document after the last scrutiny, the new seal reflects that and the old
- * certificate stops verifying, which is exactly the behaviour we want.
- */
-export async function GET(req: Request) {
-  const user = await getSessionUser();
-  if (!user) return json({ error: "Not signed in." }, 401);
-
-  const url = new URL(req.url);
-  const bundleId = url.searchParams.get("bundleId") ?? "";
-  const bundle = await getBundle(bundleId);
-  if (!bundle || bundle.ownerEmail !== user.email)
-    return json({ error: "Bundle not found." }, 404);
-
-  const result = (await getResult(bundleId)) ?? runScrutiny(bundle);
-  if (!result.score) return json({ error: "This bundle has not been scored yet." }, 409);
-
+export const maxDuration = 120;
+export async function GET(req:Request) {
+  const user=await getSessionUser();
+  if(!user) return Response.json({error:"Not signed in."},{status:401});
+  const url=new URL(req.url),b=await getBundle(url.searchParams.get("bundleId")||"");
+  if(!b||b.ownerEmail!==user.email) return Response.json({error:"Bundle not found."},{status:404});
   try {
-    const seal = await sealBundle(bundle, result, result.score);
-
-    // Record that a seal was issued, so the stepper can mark stage IV complete.
-    // The seal itself is recomputed on every request rather than cached: it must
-    // always describe the bytes on disk now, not the bytes at first issue.
-    if (!bundle.sealedAt) {
-      bundle.sealedAt = seal.manifest.sealedAt;
-      await saveBundle(bundle);
+    const a=await finalArtifact(b);
+    const caseSlug=a.fileName.replace(/-paperbook\.pdf$/i,"");
+    const certificateName=caseSlug+"-integrity-seal.pdf";
+    // No content change: the revision key excludes this UI bookkeeping timestamp.
+    if(b.sealedAt!==a.seal.manifest.sealedAt) await saveBundle({...b,sealedAt:a.seal.manifest.sealedAt});
+    if(url.searchParams.get("format")==="zip") {
+      const files=[{name:a.fileName,bytes:a.pdf},{name:"param-integrity-manifest.json",bytes:Buffer.from(JSON.stringify(a.seal,null,2))},
+        {name:certificateName,bytes:await sealCertificate(a.seal)},
+        {name:"final-scrutiny.json",bytes:Buffer.from(JSON.stringify(a.result,null,2))},
+        {name:"READ-ME.txt",bytes:Buffer.from("Verify ONLY the paperbook PDF with param-integrity-manifest.json. The certificate uses the same saved seal. The scrutiny JSON is a review aid; the seal covers only files named in the manifest. Remaining findings and skipped checks require review. Not court clearance. Original uploads are unchanged; the original index is replaced, not duplicated.")}];
+      return new Response(new Uint8Array(zipFiles(files)),{headers:{"Content-Type":"application/zip","Content-Disposition":`attachment; filename="${caseSlug}-sealed-pack.zip"`}});
     }
-
-    if (url.searchParams.get("format") === "pdf") {
-      const pdf = await sealCertificate(seal);
-      return new Response(new Uint8Array(pdf), {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${slug(bundle.title)}-integrity-seal.pdf"`,
-        },
-      });
-    }
-    return json(seal);
-  } catch (e) {
-    return json(
-      { error: e instanceof Error ? e.message : "Could not seal this bundle." },
-      422
-    );
-  }
+    if(url.searchParams.get("format")==="pdf") return new Response(new Uint8Array(await sealCertificate(a.seal)),{
+      headers:{"Content-Type":"application/pdf","Content-Disposition":`attachment; filename="${certificateName}"`}});
+    if(url.searchParams.get("format")==="report") return Response.json({scope:"FINAL_PAPERBOOK",result:a.result,assembly:a.plan});
+    return Response.json(a.seal);
+  } catch(e) {return Response.json({error:e instanceof Error?e.message:"Seal failed"},{status:422})}
 }
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-
-const slug = (s: string) =>
-  s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "bundle";

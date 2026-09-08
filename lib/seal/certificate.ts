@@ -42,11 +42,11 @@ export function sealCertificate(seal: Seal): Promise<Buffer> {
 
   doc.moveDown(1.6);
   doc.font("Times-Bold").fontSize(21).fillColor(INK);
-  doc.text("Filing Integrity Seal");
+  doc.text(manifest.scope === "FINAL_PAPERBOOK" ? "Final Paperbook Integrity Seal" : "Filing Integrity Seal");
   doc.moveDown(0.35);
   doc.font("Helvetica").fontSize(9.5).fillColor(SOFT);
   doc.text(
-    "This record fixes the contents of a filing bundle at the moment PARAM scrutinised it. " +
+    "This record identifies the exact PDF files listed below and their recorded scrutiny outcome. " +
       "Any later change to any page of any document below will fail verification."
   );
 

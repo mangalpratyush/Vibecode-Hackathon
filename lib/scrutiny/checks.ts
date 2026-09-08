@@ -92,67 +92,25 @@ const missing_document: CheckFn = ({ bundle, rule }) => {
  * costs a round of scrutiny every time.
  */
 const annexure_cross_reference: CheckFn = ({ bundle, rule }) => {
-  const petition = bundle.documents.find(
-    (d) => d.kind === "PETITION" || d.kind === "SYNOPSIS_LIST_OF_DATES"
-  );
-  if (!petition) return [];
-
-  // "Annexure P-7", "Annexure P7", "Annexure  R-3", "ANNEXURE A-1"
-  const re = /annexure\s*[-–:]?\s*([A-Z]{1,2})\s*[-–]?\s*(\d{1,3})/gi;
-  const citedPages = new Map<string, number[]>();
-
-  // Walk page-wise so we can report WHERE the broken reference sits.
-  const pageTexts = petition.pagesText ?? [];
-  const scan = (text: string, pageNo: number | null) => {
-    let m: RegExpExecArray | null;
-    const r = new RegExp(re.source, "gi");
-    while ((m = r.exec(text)) !== null) {
-      const mark = `${m[1].toUpperCase()}-${parseInt(m[2], 10)}`;
-      const arr = citedPages.get(mark) ?? [];
-      if (pageNo !== null && !arr.includes(pageNo)) arr.push(pageNo);
-      citedPages.set(mark, arr);
-    }
-  };
-  if (pageTexts.length) pageTexts.forEach((t, i) => scan(t, i + 1));
-  else scan(petition.text, null);
-
-  const present = new Set(
-    bundle.documents
-      .filter((d) => d.kind === "ANNEXURE" && d.annexureMark)
-      .map((d) => d.annexureMark!.toUpperCase())
-  );
-
+  const pleadings = bundle.documents.filter(d => ["PETITION", "SYNOPSIS_LIST_OF_DATES", "APPLICATION"].includes(d.kind));
+  if (!pleadings.length) throw new Error("No pleading identified. Annexure reconciliation requires review.");
+  const cited = new Map<string, { id: string; page: number }>();
   const out: Defect[] = [];
-
-  // Cited in the petition, absent from the bundle.
-  for (const [mark, pages] of citedPages) {
-    if (present.has(mark)) continue;
-    const where = pages.length
-      ? ` It is referred to at ${pages.length === 1 ? "page" : "pages"} ${pageRanges(pages)} of the ${DOC_KIND_LABEL[petition.kind].toLowerCase()}.`
-      : "";
-    out.push(
-      defect(
-        rule,
-        `Annexure ${mark} is relied on but is not in the bundle`,
-        `The petition relies on Annexure ${mark}, and no such annexure was found among the uploaded documents.${where} Either file it, or correct the reference.`,
-        { documentId: petition.id, pageNo: pages[0] }
-      )
-    );
+  for (const doc of pleadings) {
+    (doc.pagesText.length ? doc.pagesText : [doc.text]).forEach((text, i) => {
+      for (const match of text.matchAll(/annexure[\s_\-\u2010-\u2015]*([A-Z]{1,2})[\s_\-\u2010-\u2015]*(\d(?:[ \t]*\d){0,2})/gi))
+        cited.set(match[1].toUpperCase()+"-"+Number(match[2].replace(/\s/g,"")), { id: doc.id, page: i+1 });
+      if (/annexure[\s\S]{0,100}\bpages?\s*_{2,}/i.test(text))
+        out.push(defect(rule, "Unfinished annexure page reference", "The pleading contains an unfilled annexure page range. Use the generated index to update the source pleading and upload the revised version.", {documentId:doc.id,pageNo:i+1,severity:"REGISTRY_OBJECTION"}));
+    });
   }
-
-  // In the bundle, never referred to.
-  for (const mark of present) {
-    if (citedPages.has(mark)) continue;
-    out.push(
-      defect(
-        rule,
-        `Annexure ${mark} is filed but never referred to`,
-        `Annexure ${mark} forms part of the bundle but the petition does not cite it anywhere. An annexure that no pleading relies on invites the question of why it is on the record.`,
-        { severity: "ADVISORY" }
-      )
-    );
-  }
-
+  const annexures = bundle.documents.filter(d => d.kind === "ANNEXURE");
+  if (annexures.some(d => !d.annexureMark)) throw new Error("One or more annexure identifiers are unreadable. Assign them in Verification.");
+  const present = new Set(annexures.map(d => d.annexureMark!.toUpperCase()));
+  for (const [mark, where] of cited) if (!present.has(mark))
+    out.push(defect(rule, "Annexure "+mark+" is cited but missing", "The pleading refers to "+mark+" but no uploaded annexure has that identifier.", {documentId:where.id,pageNo:where.page}));
+  for (const doc of annexures) if (!cited.has(doc.annexureMark!.toUpperCase()))
+    out.push(defect(rule, "Annexure "+doc.annexureMark+" has no pleading reference", "Review whether this document belongs in the filing.", {documentId:doc.id,severity:"ADVISORY"}));
   return out;
 };
 
@@ -161,6 +119,11 @@ const annexure_cross_reference: CheckFn = ({ bundle, rule }) => {
 const pagination_continuity: CheckFn = ({ bundle, rule }) => {
   const out: Defect[] = [];
   for (const doc of bundle.documents) {
+    if (["COVER", "CHECKLIST", "INDEX", "FILING_MEMO"].includes(doc.kind)) continue;
+    if (doc.kind === "SYNOPSIS_LIST_OF_DATES") {
+      const letters = doc.pagesText.map(t => t.trim().match(/^([A-Z])\s*(?:\n|$)/)?.[1]);
+      if (letters.length && letters.every((v,i) => v && (!i || v.charCodeAt(0) === letters[i-1]!.charCodeAt(0)+1))) continue;
+    }
     const numbered = doc.pages.filter((p) => p.printedPageNo !== null);
     // Fewer than half the pages carry a printed number: treat as unpaginated.
     if (doc.pages.length >= 4 && numbered.length < doc.pages.length / 2) {
@@ -242,11 +205,17 @@ const vernacular_without_translation: CheckFn = ({ bundle, rule }) => {
   const hasTranslation = bundle.documents.some((d) =>
     /translat/i.test(d.fileName) || /english translation/i.test(d.text.slice(0, 3000))
   );
-  if (hasTranslation) return [];
 
   for (const doc of bundle.documents) {
-    const indic = doc.pages.filter((p) => p.script === "devanagari");
+    const gazette = /GAZETTE|REGD\.\s*NO/i.test(doc.text);
+    const indic = doc.pages.filter((p, i) => {
+      if (p.script !== "devanagari") return false;
+      // Bilingual gazettes print the English notification on the same/next page.
+      const nearby = (doc.pagesText[i] || "") + "\n" + (doc.pagesText[i+1] || "");
+      return !(gazette && /MINISTRY OF COMMUNICATIONS[\s\S]{0,150}NOTIFICATION/i.test(nearby));
+    });
     if (!indic.length) continue;
+    if (hasTranslation) throw new Error("A translation is supplied, but its correspondence to these vernacular pages needs human review.");
     out.push(
       defect(
         rule,
@@ -441,15 +410,15 @@ const welfare_stamp: CheckFn = ({ bundle, rule }) => {
 
 const index_mismatch: CheckFn = ({ bundle, rule }) => {
   const index = bundle.documents.find((d) => d.kind === "INDEX");
-  if (!index) return [];
+  if (!index) return [defect(rule, "Index missing", "No index was identified. Generate a paperbook index and review its page ranges.")];
   const total = bundle.documents.reduce((s, d) => s + d.pageCount, 0);
   // Highest page number the index claims to point at.
   const claimed = [...index.text.matchAll(/\b(\d{1,4})\s*$/gm)]
     .map((m) => parseInt(m[1], 10))
     .filter((n) => n > 0 && n < 100000);
-  if (!claimed.length) return [];
+  if (!claimed.length) throw new Error("Index page ranges could not be reliably parsed; manual reconciliation required.");
   const highest = Math.max(...claimed);
-  if (highest <= total) return [];
+  if (highest <= total) throw new Error("Source index needs row-by-row reconciliation. Being within the page count does not establish correct references.");
   return [
     defect(
       rule,

@@ -4,6 +4,7 @@ import { getBundle, getResult, saveResult } from "@/lib/store";
 import { runScrutiny } from "@/lib/scrutiny/run";
 import { runAiChecks } from "@/lib/scrutiny/ai-checks";
 import { activeRules } from "@/lib/rulebook";
+import { scoreFiling } from "@/lib/scrutiny/score";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -66,6 +67,7 @@ export async function POST(req: Request) {
     }
   }
 
+  result.score = scoreFiling(result);
   await saveResult(result);
   return NextResponse.json({ ok: true, result });
 }

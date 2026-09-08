@@ -5,6 +5,7 @@ import { getBundle } from "@/lib/store";
 import { extractFilingDates } from "@/lib/docs/dates";
 import { DOC_KIND_LABEL } from "@/lib/types";
 import ExtractionReview from "@/components/portal/ExtractionReview";
+import { caseTypeById } from "@/lib/rulebook";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function ExtractionStage({
   if (!bundle || bundle.ownerEmail !== user.email) notFound();
 
   const { evidence } = extractFilingDates(bundle.documents);
+  const needsLimitationDates = caseTypeById(bundle.caseTypeId)?.limitationDays != null;
   const pages = bundle.documents.reduce((sum, document) => sum + document.pageCount, 0);
   const readable = bundle.documents.filter((document) => document.hasTextLayer).length;
   const attention = bundle.documents.filter(
@@ -29,7 +31,7 @@ export default async function ExtractionStage({
   const metrics = [
     { icon: Files, value: bundle.documents.length, label: "Documents received" },
     { icon: ScanText, value: pages, label: "Pages inspected" },
-    { icon: CalendarClock, value: "4", label: "Dates to verify" },
+    { icon: CalendarClock, value: needsLimitationDates ? Object.values(evidence).filter(Boolean).length : "N/A", label: needsLimitationDates ? "Dates found in source" : "Fixed limitation period" },
     { icon: ShieldAlert, value: attention, label: attention === 1 ? "Item needs review" : "Items need review" },
   ];
 
@@ -45,8 +47,7 @@ export default async function ExtractionStage({
           <span className="block text-[var(--brand)]">drive the audit.</span>
         </h1>
         <p className="mt-4 max-w-[46rem] text-[16px] leading-7 text-ink-soft">
-          Review the dates and document types PARAM extracted. Every value is paired with
-          its source so you can correct it before scrutiny begins.
+          Review document types and source evidence before scrutiny begins. Limitation date fields appear only when this case type needs them.
         </p>
       </header>
 
@@ -70,6 +71,7 @@ export default async function ExtractionStage({
 
       <ExtractionReview
         bundleId={bundle.id}
+        needsLimitationDates={needsLimitationDates}
         confirmedAt={bundle.extractionConfirmedAt ?? null}
         dates={bundle.dates as unknown as Record<string, string | undefined>}
         dateEvidence={evidence as Record<string, string | undefined>}

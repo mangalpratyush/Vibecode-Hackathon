@@ -38,7 +38,14 @@ export function describeDocument(doc: BundleDocument): DocumentDescription {
   }
   if (doc.kind === "UNKNOWN" && !judicial && !template) label = "Document";
   const identity = [court, caseNumber || (template ? "Form No. 28" : citation)].filter(Boolean).join(" · ");
-  return { label, detail: identity || doc.fileName, caseNumber, court, template, judicial };
+  // Distinguish filings without exposing long machine filenames as the primary label.
+  if (!judicial && !template) {
+    const qualifier = doc.fileName.match(/petitioner[ _-]*(\d+)/i)?.[1];
+    if (qualifier && (doc.kind === "AFFIDAVIT" || doc.kind === "VAKALATNAMA")) label += " - Petitioner " + qualifier;
+    if (doc.kind === "APPLICATION") label = doc.fileName.replace(/^\d+[_ -]*/, "").replace(/\.pdf$/i, "").replace(/_/g, " ");
+  }
+  const detail = doc.kind === "UNKNOWN" ? doc.fileName : (caseNumber ? identity : "");
+  return { label, detail, caseNumber, court, template, judicial };
 }
 
 export interface AssemblyWarning { code: string; message: string; fileNames?: string[] }

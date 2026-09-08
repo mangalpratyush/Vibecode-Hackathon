@@ -92,6 +92,9 @@ export type DocKind =
   | "ANNEXURE"
   | "APPLICATION"
   | "INDEX"
+  | "COVER"
+  | "CHECKLIST"
+  | "FILING_MEMO"
   | "UNKNOWN";
 
 export const DOC_KIND_LABEL: Record<DocKind, string> = {
@@ -107,6 +110,9 @@ export const DOC_KIND_LABEL: Record<DocKind, string> = {
   ANNEXURE: "Annexure",
   APPLICATION: "Interlocutory Application",
   INDEX: "Index",
+  COVER: "Cover page",
+  CHECKLIST: "Advocate checklist",
+  FILING_MEMO: "Filing memo",
   UNKNOWN: "Unclassified",
 };
 

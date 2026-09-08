@@ -1,4 +1,5 @@
 import type { BundleDocument, DetectedMatter, DetectedValue } from "../types";
+import { readPartyBlocks } from "./party-blocks";
 
 export type { DetectedMatter };
 
@@ -171,6 +172,13 @@ export function detectMatter(documents: BundleDocument[]): DetectedMatter {
     }
 
     if (!out.parties) {
+      const block = readPartyBlocks(head);
+      if (block) out.parties = {
+        value: {...block,title: `${titleCase(block.petitioner)} v. ${titleCase(block.respondent)}`},
+        evidence: head.slice(0,2000), from: doc.fileName,
+      };
+    }
+    if (!out.parties) {
       const m = head.match(PARTIES);
       if (m) {
         const petitioner = tidy(m[1]);
@@ -197,7 +205,9 @@ export function detectMatter(documents: BundleDocument[]): DetectedMatter {
 
 /** Cause titles are printed in caps; a workspace list is easier to scan in title case. */
 function titleCase(s: string): string {
-  if (s !== s.toUpperCase()) return s;
+  if (s !== s.toUpperCase()) {
+    return s.replace(/^(.*?)( & (?:Anr|Ors)\.)$/, (_, name, suffix) => titleCase(name) + suffix);
+  }
   return s
     .toLowerCase()
     .replace(/\b([a-z])/g, (c) => c.toUpperCase())

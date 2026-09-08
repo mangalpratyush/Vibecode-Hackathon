@@ -1,6 +1,7 @@
 import type { Bundle, ScrutinyResult } from "./types";
 import type { RedlineSet } from "./scrutiny/redlines";
 import { getMongoDb } from "./mongodb";
+import { normalizeBundle } from "./docs/normalize";
 
 /**
  * Storage.
@@ -63,17 +64,18 @@ export async function saveBundle(b: Bundle): Promise<void> {
 }
 
 export async function getBundle(id: string): Promise<Bundle | null> {
-  if (!usingMongo()) return mem.bundles.get(id) ?? null;
+  if (!usingMongo()) { const b = mem.bundles.get(id); return b ? normalizeBundle(b) : null; }
   const db = await getMongoDb();
   const doc = await db.collection<Bundle>("bundles").findOne({ id }, { projection: { _id: 0 } });
-  return doc ?? null;
+  return doc ? normalizeBundle(doc) : null;
 }
 
 export async function listBundles(ownerEmail: string): Promise<Bundle[]> {
   if (!usingMongo()) {
     return [...mem.bundles.values()]
       .filter((b) => b.ownerEmail === ownerEmail)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map(normalizeBundle);
   }
   const db = await getMongoDb();
   return db
@@ -81,7 +83,7 @@ export async function listBundles(ownerEmail: string): Promise<Bundle[]> {
     .find({ ownerEmail }, { projection: { _id: 0 } })
     .sort({ createdAt: -1 })
     .limit(50)
-    .toArray();
+    .toArray().then(bundles => bundles.map(normalizeBundle));
 }
 
 export async function deleteBundle(id: string, ownerEmail: string): Promise<void> {

@@ -15,7 +15,12 @@ export function preserveFormAppearances(pdf: PDFDocument): number {
     if (!annots) continue;
     for (let i = annots.size() - 1; i >= 0; i--) {
       const widget = annots.lookup(i, PDFDict);
-      if (widget.lookupMaybe(PDFName.of("Subtype"), PDFName)?.asString() !== "/Widget") continue;
+      const subtype = widget.lookupMaybe(PDFName.of("Subtype"), PDFName)?.asString();
+      if (subtype === "/Link" || subtype === "/Popup") continue;
+      // Bake saved annotation appearances into the source coordinate system BEFORE
+      // page rotation/normalisation. Transforming Rect alone distorts FreeText.
+      if (subtype !== "/Widget" && !widget.lookupMaybe(PDFName.of("AP"), PDFDict))
+        throw new Error("A visible annotation has no saved appearance; review the source before export.");
       const flags = widget.lookupMaybe(PDFName.of("F"), PDFNumber)?.asNumber() || 0;
       if (flags & 3) { annots.remove(i); continue; } // Invisible/hidden is not evidence to reveal.
       const rect = widget.lookupMaybe(PDFName.of("Rect"), PDFArray);

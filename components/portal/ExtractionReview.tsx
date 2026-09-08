@@ -61,8 +61,10 @@ export default function ExtractionReview({
   dates: initialDates,
   dateEvidence,
   confirmedAt,
+  needsLimitationDates = true,
 }: {
   bundleId: string;
+  needsLimitationDates?: boolean;
   documents: DocRow[];
   dates: Record<string, string | undefined>;
   dateEvidence: Record<string, string | undefined>;
@@ -82,7 +84,7 @@ export default function ExtractionReview({
   );
   const noTextLayer = docs.filter((document) => !document.hasTextLayer);
   const missingDates = DATE_FIELDS.filter(
-    (field) => field.key !== "filingOn" && !dates[field.key]
+    (field) => needsLimitationDates && field.key === "pronouncedOn" && !dates[field.key]
   );
   const issueCount = lowConfidence.length + noTextLayer.length + missingDates.length;
 
@@ -175,13 +177,13 @@ export default function ExtractionReview({
         {issueCount > 0 && (
           <div className="flex flex-wrap gap-2 sm:justify-end">
             {lowConfidence.length > 0 && <IssuePill>{lowConfidence.length} classifications</IssuePill>}
-            {noTextLayer.length > 0 && <IssuePill>{noTextLayer.length} unreadable files</IssuePill>}
+            {noTextLayer.length > 0 && <IssuePill>{noTextLayer.length} scans need OCR review</IssuePill>}
             {missingDates.length > 0 && <IssuePill>{missingDates.length} missing dates</IssuePill>}
           </div>
         )}
       </section>
 
-      <section className="workspace-card overflow-hidden">
+      {needsLimitationDates && <section className="workspace-card overflow-hidden">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-rule px-5 py-5 sm:px-6">
           <div className="flex gap-3.5">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--brand-soft)] text-[var(--brand)]">
@@ -190,7 +192,7 @@ export default function ExtractionReview({
             <div>
               <h2 className="text-[18px] font-bold text-ink">Dates that determine limitation</h2>
               <p className="mt-1 max-w-2xl text-[12.5px] leading-5 text-ink-soft">
-                Edit a date only when the extracted value does not match the source shown with it.
+                Confirm the order date and add other dates where applicable. An empty field is not an extracted date.
               </p>
             </div>
           </div>
@@ -205,7 +207,7 @@ export default function ExtractionReview({
             const source = initialDates.source
               ? (initialDates.source as unknown as Record<string, string>)[field.key]
               : undefined;
-            const missing = field.key !== "filingOn" && !dates[field.key];
+            const missing = !dates[field.key];
 
             return (
               <article
@@ -230,7 +232,7 @@ export default function ExtractionReview({
                     ) : (
                       <CheckCircle2 className="h-3 w-3" strokeWidth={2.2} />
                     )}
-                    {missing ? "Missing" : "Extracted"}
+                    {missing ? (field.key === "pronouncedOn" ? "Required" : "Not supplied") : source === "user" || dates[field.key] !== initialDates[field.key] ? "Entered" : evidence ? "Extracted" : "Supplied"}
                   </span>
                 </div>
 
@@ -269,7 +271,7 @@ export default function ExtractionReview({
             );
           })}
         </div>
-      </section>
+      </section>}
 
       <section className="workspace-card overflow-hidden">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-rule px-5 py-5 sm:px-6">
