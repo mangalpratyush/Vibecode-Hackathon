@@ -1,8 +1,6 @@
 import Image from "next/image";
-import { redirect } from "next/navigation";
 import { Check, FileSearch, Scale } from "lucide-react";
 import AuthCard from "@/components/landing/AuthCard";
-import { getSessionUser } from "@/lib/auth/session";
 
 const CAPABILITIES = [
   {
@@ -22,9 +20,20 @@ const CAPABILITIES = [
   },
 ];
 
-export default async function LandingPage() {
-  if (await getSessionUser()) redirect("/dashboard");
+/*
+  The front door always shows the front door.
 
+  This used to send anyone holding a session straight through to the workspace,
+  which meant that pasting the address a second time skipped the sign-in screen
+  entirely: you were simply inside. That is wrong for a shared link, where the
+  first thing a visitor should meet is the door and not somebody else's open
+  filing, and it hid the one screen that says what PARAM is.
+
+  Signing in still lands on the upload screen, so nobody is made to navigate
+  twice. The session is left alone: this is about what the root address shows,
+  not about throwing anybody out.
+*/
+export default function LandingPage() {
   return (
     <main className="relative min-h-[100svh] overflow-hidden bg-[#171313] text-white">
       <Image
